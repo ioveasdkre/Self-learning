@@ -1,0 +1,6 @@
+編輯器
+Vs Code
+
+延伸模組
+Code Runner 多種程式語言代碼運行器
+Prettier - Code formatter 程式自動編排器
