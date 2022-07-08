@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>IIFE 立即函式(Immediately-Invoked Function Expression)</title>
+    </head>
+    <body>
+        <h1>IIFE 立即函式(Immediately-Invoked Function Expression)</h1>
+        <h2>特色</h2>
+        <h3>立即函式可以讓函式在建立後立即執行。</h2>
+        <h3>無法在函式外被呼叫</h3>
+        <script>
+            (function fn1() {
+                num++;
+                console.log(num);
+                return num !== 5 ? fn1(num) : console.log("finished!");
+            })((num = 0));
+        </script>
+    </body>
+</html>
