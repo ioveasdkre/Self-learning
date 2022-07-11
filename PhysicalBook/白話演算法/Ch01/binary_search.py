@@ -1,3 +1,4 @@
+# region binary_search [二元搜尋法]
 def binary_search(list: list, item: int):
   '''
   二元搜尋法
@@ -31,6 +32,7 @@ def binary_search(list: list, item: int):
       low = mid + 1
   # 想找的元素不存在
   return None
+# endregion
 
 #我們用這個 list 測試一下！
 my_list = [1, 3, 5, 7, 9]

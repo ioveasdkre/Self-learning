@@ -1,3 +1,4 @@
+// #region fun1 [利用迴圈加總]
 /**
  * 利用迴圈加總
  * 1 + 2 + 3 + ... + n = sum
@@ -11,7 +12,9 @@ function fun1(n) {
     }
     return sum;
 }
+// #endregion
 
+// #region fun2 [利用等差公式 計算加總]
 /**
  * 利用等差公式 計算加總
  * 1 + 2 + 3 + ... + n = sum
@@ -21,6 +24,7 @@ function fun1(n) {
 function fun2(n) {
     return ((1 + n) * n) / 2; // 回傳值
 }
+// #endregion
 
 console.log(`fun1 ${fun1(10)}`);
 console.log(`fun2 ${fun2(10)}`);

@@ -1,8 +1,16 @@
+// #region add [計算加總]
 // function
+/**
+ * 計算加總
+ * @param {int} n1
+ * @param {int} n2
+ * @return {int}
+ */
 function add(n1, n2) {
     console.log(n1 + n2); // 輸出
     return n1 + n2; // 回傳值
 }
+// #endregion
 
 add(8, -4);
 

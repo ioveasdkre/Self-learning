@@ -1,3 +1,4 @@
+// #region Circle
 // class
 class Circle {
     // 建構子
@@ -8,6 +9,7 @@ class Circle {
         return Math.PI * this.radius * this.radius;
     }
 }
+// #endregion
 
 let c1 = new Circle(5);
 let c2 = new Circle(10);

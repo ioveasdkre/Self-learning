@@ -1,0 +1,24 @@
+13.Big O Notation
+一
+given an algorithm that has time complexity f(n) = 2n, what's the Big O of this algorithm
+一個時間複雜度為 f(n) = 2n 的算法，這個算法的 Big O 是多少
+
+answer O(n)
+
+二
+given an algorithm that has time complexity f(n) = 13n^3 + 6n + 7, what's the Big O of this algorithm
+一個時間複雜度為 f(n) = 13n^3 + 6n + 7 的算法，這個算法的 Big O 是多少
+
+answer O(n^3)
+
+三
+given an algorithm that has time complexity f(n) = 4log_2n, what's the Big O of this algorithm
+一個時間複雜度為 f(n) = 4log_2n 的算法，這個算法的 Big O 是多少
+
+answer O(logn)
+
+四
+given an algorithm that has time complexity f(n) = 5, what's the Big O of this algorithm
+一個時間複雜度為 f(n) = 5 的算法，這個算法的 Big O 是多少
+
+answer O(1)

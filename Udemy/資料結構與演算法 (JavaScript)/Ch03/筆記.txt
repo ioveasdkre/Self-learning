@@ -1,4 +1,4 @@
-10.Comparing Algorithms
+10.ComparingAlgorithms
 演算法
 花費的時間越少越好 占用的空間越少越好
 
@@ -12,3 +12,45 @@
 1.時間複雜度, 空間複雜度
 2. + - * / 每一個比較(> < = >=...)都算做一個操作
 3.時間複雜度 執行次數越多 花的時間越多 執行次數越少 花費的時間越少
+
+
+12.Analysis of fun 1 and fun 2
+解講 10.ComparingAlgorithms
+x軸 空間複雜度
+y軸 時間複雜度
+計算複雜度
+fun1
+i <= n, i++, sum+= 共 3次個 n(反覆計算), 如下方公式
+一 f(n) = 3n
+二 Linear 線性的
+
+fun2
+(1 + n), * n, / 2 共3次
+一 f(n) = 3
+二 constant 不變的
+
+
+13.Big O Notation
+一 n不斷擴大的時候 f(n)成長趨勢
+二 要為最糟糕的情況做打算 當 n越來越巨大的時候 f(n)的趨勢
+
+Calculating Big O Value 計算最大 O值
+一 Constant doesn't matter 常數並不重要
+    Constant 常數, 不會變的
+    variable 變數, 會變化
+    f(n) = 3n  3是常數 n是變數
+    轉換 O(n)  3為常數並不重要
+二 Small Terms don't matter 小規則並不重要
+    f(n) = 3n^2 + 6n + 4n^0 備註 ^ 為平方
+    轉換 O(n^2)  n^2為最大, 3為常數並不重要
+三 Logarithm Base doesn't matter
+    log_2^8
+    轉換 f(n) = log_2^n
+    轉換 O(logn)
+
+常見演算法
+越好 O(1) O(logn) O(n) O(nlogn) O(n^2) O(n^3) 越差
+O(nlogn)   sorting 排序常用
+
+重要事項
+Big O Notation 演算法基礎一定要會

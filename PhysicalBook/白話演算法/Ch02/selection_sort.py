@@ -1,3 +1,4 @@
+# region find_smallest_index [在串列中找出最小值的索引]
 def find_smallest_index(arr: list):
     '''
     在串列中找出最小值的索引
@@ -16,7 +17,9 @@ def find_smallest_index(arr: list):
             smallest_index = i   # 記下目前最小值的索引
             smallest = arr[i]    # 記下目前的最小值
     return smallest_index        # 跑完串列就把最小值的索引傳回去
+# endregion
 
+# region selection_sort [排序串列中的資料]
 def selection_sort(arr: list): # 用 Selection Sort 演算法對串列的元素做排序
     '''
     排序串列中的資料
@@ -33,5 +36,6 @@ def selection_sort(arr: list): # 用 Selection Sort 演算法對串列的元素�
         smallest = find_smallest_index(arr)  # 找出串列中最小值的 index
         new_arr.append(arr.pop(smallest))    # pop() 刪除並返回索引處的項目（默認最後一個）
     return new_arr # append() 會把 pop() 傳回來的元素值加到 new_arr 的尾端
+# endregion
 
 print(selection_sort([5, 3, 6, 2, 10]))

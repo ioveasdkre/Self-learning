@@ -1,3 +1,4 @@
+// #region example [演算法分析]
 /**
  * 演算法分析
  * f(n) = 3n + n平方 + 4 次的 "Hello"
@@ -28,6 +29,7 @@ function example(n) {
 
     return counter;
 }
+// #endregion
 
 example(2); // 6 + 4 + 4 = 14 共執行 14次 Hello
 
