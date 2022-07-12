@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>為要素圖層設置樣式</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>為要素圖層設置樣式</h1>
+    <h4>了解如何使用數據驅動的樣式來應用象徵顏色和样式要素圖層.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>一個要素層是一個數據集特色服務託管在ArcGIS. 每個要素圖層包含特徵與單幾何學類型（點、線或多邊形）和一組屬性. OpenLayers 中的圖層可以包含樣式函數，這些函數使用屬性值來更改要素的外觀。這允許您通過將可視變量與數據屬性相關聯來創建複雜的數據驅動的可視化。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-118.805, 34.027]),
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Streets";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 加入圖層
+        olms(map, basemapURL).then(function (map) {
+            // 登山路口圖層風格設定
+            const trailheadStyle = function (feature) {
+                // 回傳風格
+                return new ol.style.Style({
+                    // 圖像風格。: 圖標
+                    image: new ol.style.Icon({
+                        // 圖像源 URI。
+                        src: "image/npsPictograph_0231b.png",
+                        // 比例。
+                        scale: 0.25
+                    }),
+                    // 文字樣式。: 設置矢量特徵的文本樣式。
+                    text: new ol.style.Text({
+                        // 文字內容。
+                        text: feature.get("TRL_NAME"),
+                        // 字體樣式為 CSS 'font'值
+                        font: "italic 12px sans-serif", // 斜體 12px 無襯線字體
+                        // 以像素為單位的水平文本偏移。
+                        offsetX: 10,
+                        // 文本對齊。 左
+                        textAlign: "left",
+                        // 填充樣式。: 設置矢量特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // 顏色: 白色
+                            color: "#FFFFFF"
+                        }),
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 顏色: 漆綠色
+                            color: "#5E8D74",
+                            // 寬度
+                            width: 3
+                        })
+                    })
+                });
+            };
+
+            // 登山路口圖層名稱
+            const trailheadsLayerName = "Trailheads";
+            // 登山路口圖層 Url
+            const trailheadsLayerURL =
+            "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/" +
+            trailheadsLayerName +
+            "/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=pgeojson";
+
+            // 在客戶端呈現的矢量數據。
+            const trailheadsLayer = new ol.layer.Vector({
+                // 來源： 為矢量圖層提供特徵源。
+                source: new ol.source.Vector({
+                    // 設置時 XHR 功能加載器使用的功能格式url: 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                    format: new ol.format.GeoJSON(),
+                    // 網址
+                    url: trailheadsLayerURL
+                }),
+                // 風格
+                style: trailheadStyle,
+                // 整理圖像和文本。
+                declutter: true
+            });
+
+            // 加入圖層
+            map.addLayer(trailheadsLayer);
+
+            // 步道風格
+            const trailStyle = function (feature) {
+                // 回傳風格
+                return new ol.style.Style({
+                    // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                    stroke: new ol.style.Stroke({
+                        // 顏色: 紫色
+                        color: "#BA55D3",
+                        // 寬度
+                        width: 3 + (4 * feature.get("ELEV_GAIN")) / 2300
+                    })
+                });
+            };
+
+            // 步道圖層名稱
+            const trailsLayerName = "Trails";
+            // 步道圖層 Url
+            const trailsLayerURL =
+            "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/" +
+            trailsLayerName +
+            "/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=pgeojson";
+
+            // 在客戶端呈現的矢量數據。
+            const trailsLayer = new ol.layer.Vector({
+                // 來源： 為矢量圖層提供特徵源。
+                source: new ol.source.Vector({
+                    // 設置時 XHR 功能加載器使用的功能格式url: 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                    format: new ol.format.GeoJSON(),
+                    // 網址
+                    url: trailsLayerURL
+                }),
+                // 風格
+                style: trailStyle
+            });
+
+            // getLayers 獲取與此地圖關聯的圖層集合。
+            // insertAt(索引(位置), 元素) 在提供的索引處插入一個元素。
+            map.getLayers().insertAt(1, trailsLayer);
+
+            // 自行車步道風格
+            const bikeTrailsStyle = function (feature) {
+                // 判斷讀取的值為 true
+                if (feature.get("USE_BIKE") === "Yes") {
+                    // 回傳風格
+                    return new ol.style.Style({
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 線條虛線圖案。
+                            lineDash: [1, 4],
+                            // 顏色: 白色
+                            color: "white",
+                            // 寬度
+                            width: 2
+                        })
+                    });
+                }
+            };
+
+            // 在客戶端呈現的矢量數據。
+            const bikeTrailsLayer = new ol.layer.Vector({
+                // 來源： 步道圖層
+                source: trailsLayer.getSource(), // 讀取來源
+                // 風格
+                style: bikeTrailsStyle
+            });
+
+            // getLayers 獲取與此地圖關聯的圖層集合。
+            // insertAt(索引(位置), 元素) 在提供的索引處插入一個元素。
+            map.getLayers().insertAt(2, bikeTrailsLayer);
+
+            // 公園風格
+            const parksStyle = function (feature) {
+                // 讀取類別
+                const type = feature.get("TYPE");
+                // 顏色表
+                const colorTable = {
+                    "Natural Areas": "#9E559C", // 暗紫色
+                    "Regional Open Space": "#A7C636", // 暗綠色
+                    "Local Park": "#149ECE", // 深藍色
+                    "Regional Recreation Park": "#ED5151" // 淡紅色
+                };
+                // 回傳風格
+                return new ol.style.Style({
+                    // 填充樣式。: 設置矢量特徵的填充樣式。
+                    fill: new ol.style.Fill({
+                        // 顏色: 顏色表 or 透明
+                        color: colorTable[feature.get("TYPE")] || "transparent"
+                    })
+                });
+            };
+
+            // 公園圖層名稱
+            const parksLayerName = "Parks_and_Open_Space";
+            // 公園圖層 Url
+            const parksLayerURL =
+            "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/" +
+            parksLayerName +
+            "/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=pgeojson";
+
+            // 在客戶端呈現的矢量數據。
+            const parksLayer = new ol.layer.Vector({
+                // 來源： 為矢量圖層提供特徵源。
+                source: new ol.source.Vector({
+                    // 設置時 XHR 功能加載器使用的功能格式url: 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                    format: new ol.format.GeoJSON(),
+                    // 網址
+                    url: parksLayerURL
+                }),
+                // 透明度
+                opacity: 0.4,
+                // 風個
+                style: parksStyle
+            });
+
+            // getLayers 獲取與此地圖關聯的圖層集合。
+            // insertAt(索引(位置), 元素) 在提供的索引處插入一個元素。
+            map.getLayers().insertAt(1, parksLayer);
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/styles-and-data-visualization/style-a-feature-layer/">官方範例</a>
+</body>
+</html>

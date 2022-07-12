@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS 獲取特徵信息（層）</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>WMS 獲取特徵信息（層）</h1>
+    <table id="info">
+        <tr>
+            <td>All features:</td>
+            <td id="all"></td>
+        </tr>
+        <tr>
+            <td>Hotel features:</td>
+            <td id="hotel"></td>
+        </tr>
+        <tr>
+            <td>Restaurant features:</td>
+            <td id="restaurant"></td>
+        </tr>
+    </table>
+    <h4>演示如何使用格式對像中的layers選項，該選項ol/format/WMSGetFeatureInfo允許單個 WMS GetFeatureInfo 請求返回的要素要求按圖層名稱讀取多個圖層。</h4>
+    <h4>如果使用 VS Code請開啟 Open With Live Server查看此範例</h4>
+    <script>
+        // fetch 讀取 API檔案，提供了一種 JavaScript Interface 來操作 HTTP pipeline，比方 request 和 response。
+        // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/API/Fetch_API/Using_Fetch
+        fetch('data/WMS_GetFeatureInfo(Layers).xml')
+            // 非同步行為完成後的動作。
+            // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+            .then(function (response) {
+                // object.text() 或 var object = new text('string')
+                // 此方法類似於 JavaScript中的 innerText屬性，可以用來讀取或者設置某個元素中的文字內容。
+                return response.text();
+            })
+            // 非同步行為完成後的動作。
+            // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+            .then(function (response) {
+                // 這是閱讀功能的標準方法
+                // 讀取 WMSGetFeatureInfo 格式的格式。它用於 module:ol/format/GML2~GML2讀取功能。
+                // readFeatures(來源, opt_options)從特徵集合中讀取所有特徵。
+                const allFeatures = new ol.format.WMSGetFeatureInfo().readFeatures(response);
+                // 抓取所有特徵長度並轉成字串
+                document.getElementById('all').innerText = allFeatures.length.toString();
+
+                // 指定“圖層”選項時，格式僅返回這些圖層的特徵
+                // 讀取 WMSGetFeatureInfo 格式的格式。它用於 module:ol/format/GML2~GML2讀取功能。
+                // readFeatures(來源, opt_options)從特徵集合中讀取所有特徵。
+                const hotelFeatures = new ol.format.WMSGetFeatureInfo({
+                    // 圖層，如果設置，則格式將在讀取時僅返回給定圖層的特徵。
+                    layers: ['hotel'],
+                }).readFeatures(response);
+                // 抓取指定圖層的特徵長度
+                document.getElementById('hotel').innerText = hotelFeatures.length.toString();
+
+                // 讀取 WMSGetFeatureInfo 格式的格式。它用於 module:ol/format/GML2~GML2讀取功能。
+                // readFeatures(來源, opt_options)從特徵集合中讀取所有特徵。
+                const restaurantFeatures = new ol.format.WMSGetFeatureInfo({
+                    // 圖層，如果設置，則格式將在讀取時僅返回給定圖層的特徵。
+                    layers: ['restaurant'],
+                }).readFeatures(response);
+                // 抓取指定圖層的特徵長度
+                document.getElementById('restaurant').innerText = restaurantFeatures.length.toString();
+            });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/getfeatureinfo-layers.html">官方範例</a>
+</body>
+
+</html>

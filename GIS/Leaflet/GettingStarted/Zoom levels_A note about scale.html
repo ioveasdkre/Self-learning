@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>縮放級別-關於規模的說明</title>
+    
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <!-- 當我們以零縮放級別表示世界時，它的寬度和高度為 256 像素。當我們進入縮放級別1 時，它的寬度和高度加倍，可以用四個 256 像素 x 256 像素的圖像表示：在每個縮放級別，每個圖塊被分成四份，其大小（邊的長度，由tileSize選項給出）加倍，使面積翻四倍。（換句話說，世界的寬度和高度都是像素）：256·2的zoomlevel次方 -->
+
+    <!-- 關於規模的說明 -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 最小縮放
+            minZoom: 1,
+            // 最大縮放
+            maxZoom: 1,
+            // 滑鼠拖曳
+            dragging: false
+        });
+
+        var cartodbAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>';
+
+        // tileLayer(地圖框網址, {})圖層
+        var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: cartodbAttribution
+        }).addTo(map);
+
+        // 控制變焦範例需放置，控制變焦之後
+        // setView([地理坐標], 縮放級別)
+        map.setView([0, 0], 0);
+    </script>
+    <script>
+        // control.scale()比例尺
+        // maxWidth 最大寬度(預設100)
+        L.control.scale({maxWidth: 150}).addTo(map);
+
+        // setInterval(function(){ alert("Hello"); }, 3000);
+        // setInterval(執行方法, 指定等候時間(設定間隔 1000為 1秒)) 不斷循環
+        setInterval(function(){
+            // setView([地理坐標], 縮放級別)
+            // duration 彈跳時間(毫秒)，預設為1000毫秒(1秒)
+            // animate 動畫
+            map.setView([0, 0], 0, {duration: 1, animate: true});
+            // setTimeout(執行方法, 指定等候時間(設定間隔 1000為 1秒)) 執行一次
+            setTimeout(function(){
+                map.setView([60, 0], 0, {duration: 1, animate: true});
+            }, 2000);
+        }, 4000);
+    </script>
+    <a href="https://leafletjs.com/examples/zoom-levels/">官網範例連結</a>
+</body>
+</html>

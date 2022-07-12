@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMTS 圖層功能</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>WMTS 圖層功能</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>此示例說明如何創建用於從 GetCapabilities 響應訪問 WMTS 的配置。所述WMTS示例示出了如何手動創建的配置。</h4>
+    <h4>如果使用 VS Code請開啟 Open With Live Server查看此範例</h4>
+    <script>
+        // 用於讀取 WMTS 功能數據的格式。
+        const parser = new ol.format.WMTSCapabilities();
+        let map;
+
+        // fetch 讀取 API檔案，提供了一種 JavaScript Interface 來操作 HTTP pipeline，比方 request 和 response。
+        // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/API/Fetch_API/Using_Fetch
+        fetch('data/WMTS_Layer_from_Capabilities.xml')
+            // 非同步行為完成後的動作。
+            // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+            .then(function (response) {
+                // object.text() 或 var object = new text('string')
+                // 此方法類似於 JavaScript中的 innerText屬性，可以用來讀取或者設置某個元素中的文字內容。
+                return response.text();
+            })
+            // 非同步行為完成後的動作。
+            // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+            .then(function (text) {
+                // 讀取內容
+                const result = parser.read(text);
+                // l.source.WMTS.optionsFromCapabilities(功能文檔, 圖層的配置屬性。) 從功能對像生成源選項。
+                const options = ol.source.WMTS.optionsFromCapabilities(result, {
+                    // 圖層標識符
+                    layer: 'layer-7328',
+                    // 矩陣集標識符，如果層功能中有多個矩陣集，則需要。
+                    matrixSet: 'EPSG:3857',
+                });
+
+                // 宣告一個 Map 物件
+                map = new ol.Map({
+                    // 這裡是宣告圖層陣列
+                    layers: [
+                        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                        new ol.layer.Tile({
+                            // 來源: OpenStreetMap 切片服務器的圖層源。
+                            source: new ol.source.OSM(),
+                            // 透明度
+                            opacity: 0.7,
+                        }),
+                        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                        new ol.layer.Tile({
+                            // 透明度
+                            opacity: 1,
+                            // 來源: 來自 WMTS 服務器的切片數據的圖層源。
+                            source: new ol.source.WMTS(options),
+                        }),
+                    ],
+                    // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+                    target: 'map',
+                    // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+                    view: new ol.View({
+                        // 地圖中心地點:[經度,緯度]
+                        center: [19412406.33, -5050500.21],
+                        // 視圖縮放等級
+                        zoom: 5,
+                    }),
+                });
+            });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wmts-layer-from-capabilities.html">官方範例</a>
+</body>
+
+</html>

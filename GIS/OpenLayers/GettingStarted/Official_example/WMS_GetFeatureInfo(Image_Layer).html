@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS 獲取特徵信息（圖像層）</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>WMS 獲取特徵信息（圖像層）</h1>
+    <div id="map" class="map"></div>
+    <div id="info">&nbsp;</div>
+    <h4>此示例顯示如何在單擊 WMS 圖像圖層時觸發 WMS GetFeatureInfo 請求。另外map.forEachLayerAtPixel用於在地圖上懸停不透明像素時更改鼠標指針。</h4>
+    <script>
+        // WMS 服務器的來源，提供單一的、untiled 的圖像。
+        const wmsSource = new ol.source.ImageWMS({
+            // WMS 服務 URL。
+            url: 'https://ahocevar.com/geoserver/wms',
+            // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。WIDTH、HEIGHT、BBOX 和CRS（SRS對於 WMS 版本 < 1.3.0）將動態設置。
+            params: { 'LAYERS': 'ne:ne' },
+            // 遠程 WMS 服務器的類型：mapserver,geoserver或qgis。僅當hidpiis時才需要true。
+            serverType: 'geoserver',
+            // crossOrigin加載圖像的屬性。請注意，crossOrigin如果要使用 Canvas 渲染器訪問像素數據，則必須提供一個值。有關更多詳細信息，請參閱https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image。
+            crossOrigin: 'anonymous',
+        });
+
+        // 可用於任意範圍和分辨率的服務器渲染圖像。
+        const wmsLayer = new ol.layer.Image({
+            // 來源
+            source: wmsSource,
+        });
+
+        // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級。
+        const view = new ol.View({
+            // 地圖中心地點:[經度,緯度]
+            center: [0, 0],
+            // 視圖縮放等級
+            zoom: 1,
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [wmsLayer],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級。
+            view: view,
+        });
+
+        // 真正的單擊，無需拖動和雙擊。請注意，此事件會延遲 250 毫秒，以確保它不是雙擊。
+        map.on('singleclick', function (evt) {
+            // 清空 info內容
+            document.getElementById('info').innerHTML = '';
+            // view.getResolution 獲取視圖分辨率(解析度)。
+            const viewResolution = /** @type {number} */ (view.getResolution());
+            // wmsSource.getFeatureInfoUrl(座標, 解析度, 座標系統, 獲取功能信息參數) 返回傳遞的坐標、分辨率和投影的 GetFeatureInfo URL。undefined如果無法構造 GetFeatureInfo URL，則返回。
+            const url = wmsSource.getFeatureInfoUrl(
+                evt.coordinate,
+                viewResolution,
+                'EPSG:3857',
+                { 'INFO_FORMAT': 'text/html' }
+            );
+            if (url) {
+                // fetch 讀取 API檔案，提供了一種 JavaScript Interface 來操作 HTTP pipeline，比方 request 和 response。
+                // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/API/Fetch_API/Using_Fetch
+                fetch(url)
+                    // then 非同步行為完成後的動作。
+                    // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+                    // object.text() 或 var object = new text('string')
+                    // 此方法類似於 JavaScript中的 innerText屬性，可以用來讀取或者設置某個元素中的文字內容。
+                    .then((response) => response.text())
+                    // 非同步行為完成後的動作。
+                    // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+                    .then((html) => {
+                        // 讀取內容呈現於 info
+                        document.getElementById('info').innerHTML = html;
+                    });
+            }
+        });
+
+        // 當指針移動時觸發。請注意，在觸摸設備上，這是在平移地圖時觸發的，因此與 mousemove 不同。
+        map.on('pointermove', function (evt) {
+            // 判斷滑鼠是否拖曳
+            if (evt.dragging) {
+                return;
+            }
+            // getEventPixel(事件) 返回瀏覽器事件相對於視口的地圖像素位置。
+            // originalEvent 原始事件
+            const pixel = map.getEventPixel(evt.originalEvent);
+            // forEachLayerAtPixel(像素, 回調, opt_layerFilter(圖層過濾器，註:可選)) 在視口上的像素處檢測具有顏色值的圖層，並對每個匹配的圖層執行回調。
+            const hit = map.forEachLayerAtPixel(pixel, function () {
+                return true;
+            });
+            // getTargetElement 獲取在其中呈現此地圖的 DOM 元素。與getTarget此方法相反， 此方法始終返回Element, 或者null如果地圖沒有目標。
+            // style.cursor 鼠標光標
+            // pointer 指針(鼠標)
+            map.getTargetElement().style.cursor = hit ? 'pointer' : '';
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/getfeatureinfo-image.html">官方範例</a>
+</body>
+
+</html>

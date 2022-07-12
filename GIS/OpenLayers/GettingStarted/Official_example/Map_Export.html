@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地圖導出(下載)</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- bootstrap.min.css -->
+    <link rel="stylesheet" href="Js/bootstrap-5.1.3-dist/css/bootstrap.min.css">
+    <!--load all styles 文字圖形-->
+    <link href="css/all.css" rel="stylesheet">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- core-js 使用 api的套件-->
+    <script src="JS/core3.20.3.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+<body>
+    <div id="map" class="map"></div>
+    <a id="export-png" class="btn btn-light"><i class="fas fa-download"></i>Download PNG</a>
+    <!-- download 指定下載檔名 -->
+    <a id="image-download" download="map.png"></a>
+    <h4>將地圖導出為 PNG 圖像的示例。</h4>
+    <script>
+        // 設定風格
+        const style = new ol.style.Style({
+            // 填充樣式:設置矢量特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: '#eeeeee',
+            }),
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 在客戶端呈現的矢量數據(geojson檔)。
+                new ol.layer.Vector({
+                    // 來源: 為矢量圖層提供特徵源(geojson檔)。
+                    source: new ol.source.Vector({
+                        // 路徑
+                        url: 'https://openlayers.org/data/vector/ecoregions.json',
+                        // format  XHR 功能加載器在url設置時使用的功能格式。如果url設置，則為必需，否則忽略。
+                        // ol.format.GeoJSON 用於以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                        format: new ol.format.GeoJSON(),
+                    }),
+                    // 圖層的背景顏色。如果未指定，則不會呈現背景。
+                    background: 'white',
+                    // 圖層樣式
+                    style: function (feature) {
+                        // ol.color.asArray 將顏色作為數組返回
+                        // get(key) 獲取一個值
+                        const color = ol.color.asArray(feature.get('COLOR_NNH') || '#eeeeee');
+                        // [P, G, B, A] 紅, 綠, 藍, 透明度
+                        color[3] = 0.75;
+                        // getFill 獲取填充樣式。
+                        // setColor 設定顏色
+                        style.getFill().setColor(color);
+                        // 回傳樣式
+                        return style;
+                    },
+                }),
+                // 用於將矢量數據渲染為熱圖的層
+                new ol.layer.Heatmap({
+                    // 來源: 為矢量圖層提供特徵源(geojson檔)。
+                    source: new ol.source.Vector({
+                        // 路徑
+                        url: 'Json/world-cities.geojson',
+                        // format  XHR 功能加載器在url設置時使用的功能格式。如果url設置，則為必需，否則忽略。
+                        // ol.format.GeoJSON 用於以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                        format: new ol.format.GeoJSON(),
+                    }),
+                    // 用於權重的特徵屬性或從特徵返回權重的函數。權重值的範圍應為 0 到 1（超出範圍的值將被限制在該範圍內）。
+                    weight: function (feature) {
+                        // get(key) 獲取一個值
+                        // 1e7 為 1,000,0000   e7代表7個零
+                        return feature.get('population') / 1e7;
+                    },
+                    // 以像素為單位的半徑大小。
+                    radius: 15,
+                    // 以像素為單位的模糊大小。
+                    blur: 15,
+                    // 透明度
+                    opacity: 0.75,
+                }),
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2,
+            }),
+        });
+
+        // addEventListener 將指定的監聽器註冊到EventTarget 上，當該對象觸髮指定的事件時，指定的回調函數就會被執行
+        // click 無需拖動即可單擊
+        document.getElementById('export-png').addEventListener('click', function () {
+            // once(type 事件類型或事件類型數組, listener 監聽器函數) 偵聽器的唯一鍵
+            // rendercomplete 渲染完成時觸發，即當前視口的所有源和圖塊都已完成加載，並且所有圖塊都淡入。事件對像不會有context集合。
+            map.once('rendercomplete', function () {
+                // createElement 可以指定的標籤名稱（ ）創建HTML元素，或者在未定義的標籤名稱下創建一個（en-US）
+                const mapCanvas = document.createElement('canvas');
+                const size = map.getSize(); // 獲取此地圖的大小。
+                mapCanvas.width = size[0]; // 寬度
+                mapCanvas.height = size[1]; // 高度
+                // 返回畫布上的繪圖上下文，或者null如果上下文標識符不受支持，或者畫布已設置為不同的上下文模式。
+                const mapContext = mapCanvas.getContext('2d');
+                // 將陣列內的每個元素，皆傳入並執行給定的函式一次
+                Array.prototype.forEach.call(
+                    // getViewport 獲取用作地圖視口的元素
+                    // querySelectorAll 返回一個靜態（非實時）NodeList，表示與指定選擇器組匹配的文檔元素列表。
+                    map.getViewport().querySelectorAll('.ol-layer canvas, canvas.ol-layer'),
+                    function (canvas) { // 畫布
+                        // 判斷 寬度大於 0
+                        if (canvas.width > 0) {
+                            // 抓取透明度
+                            const opacity = canvas.parentNode.style.opacity || canvas.style.opacity;
+                            // 判斷 透明度是否為空
+                            // globalAlpha 是 Canvas的 2D API使用描述在畫布上繪製繪圖，設置圖形和圖片範圍的屬性
+                            mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+
+                            // 背景顏色
+                            const backgroundColor = canvas.parentNode.style.backgroundColor;
+                            // 判斷 有值
+                            if (backgroundColor) {
+                                // 設置邊框顏色
+                                mapContext.fillStyle = backgroundColor;
+                                // fillRect(x 座標, y 座標, width 寬度, height 高度)
+                                // Canvas 2D API 的 方法繪製一個根據當前fillStyle. 該方法直接繪製到畫布上而不修改當前路徑
+                                mapContext.fillRect(0, 0, canvas.width, canvas.height);
+                            }
+
+                            let matrix; // 矩陣
+                            // 矩陣
+                            const transform = canvas.style.transform;
+                            // 判斷 有值
+                            if (transform) {
+                                // 從樣式的變換矩陣中獲取變換參數
+                                matrix = transform
+                                .match(/^matrix\(([^\(]*)\)$/)[1] // 「字符串」中搜索與任何「正則表達式」的匹配項
+                                .split(',')// 使用指定的分隔符字符串将一个String对象分割成子字符串数组，以一个指定的分割字串来决定每个拆分的位置
+                                // 建立一個新的陣列，其內容為原陣列的每一個元素經由回呼函式運算後所回傳的結果之集合
+                                .map(Number); // 轉換矩陣型態。 例如：['1', '5'].map(Number)。轉換後為 [1, 5]
+                            } else {
+                                // [水平縮放, 垂直傾斜, 水平傾斜, 垂直縮放, 水平平移, 垂直平移]
+                                matrix = [
+                                parseFloat(canvas.style.width) / canvas.width,
+                                0,
+                                0,
+                                parseFloat(canvas.style.height) / canvas.height,
+                                0,
+                                0,
+                                ];
+                            }
+                            // 將轉換應用於導出地圖上下文
+                            // CanvasRenderingContext2D 繪製矩形、文字、影像以及其它基於 canvas 元素的物件
+                            // setTransform 當前轉換重置（覆蓋）到單位矩陣，然後調用由該方法的參數描述的轉換
+                            // apply(thisArg this, [argsArray] matrix) 呼叫一個以 this 的代表值和一個陣列形式的值組。 回傳： this值及一組參數後得到的結果
+                            CanvasRenderingContext2D.prototype.setTransform.apply(
+                                mapContext,
+                                matrix
+                            );
+                            // void ctx.drawImage(image(來源), dx, dy, dWidth, dHeight) 提供了多種方式在 Canvas 上繪製
+                            // 參考網址:https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/drawImage
+                            mapContext.drawImage(canvas, 0, 0);
+                        }
+                    }
+                );
+                
+                // 將 File或保存 Blob到磁盤
+                if (navigator.msSaveBlob) {
+                    // 鏈接下載屬性在 MS瀏覽器上不起作用
+                    navigator.msSaveBlob(mapCanvas.msToBlob(), 'map.png'); // navigator.msSaveBlob(要保存的 blob, 保存文件時使用的文件名)
+                } else {
+                    // 讀取下載 id
+                    const link = document.getElementById('image-download');
+                    // 設定 href
+                    // toDataURL 回傳含有圖像和參數設置特定格式的 data URIs (預設 PNG). 回傳的圖像解析度為 96 dpi.
+                    link.href = mapCanvas.toDataURL();
+                    // 點擊事件
+                    link.click();
+                }
+            });
+            // 以同步方式請求立即渲染。
+            map.renderSync();
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/export-map.html">官方範例</a>
+</body>
+
+</html>

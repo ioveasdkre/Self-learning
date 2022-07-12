@@ -1,0 +1,25 @@
+範例說明
+LeafletCanvasMarkers\index.html	使用leaflet-canvas-marker來將大量的點位用canvas來呈現
+
+套件
+https://github.com/eJuke/Leaflet.Canvas-Markers
+
+postgis說明文件
+https://postgis.net/docs/manual-3.0/
+
+
+postgis資料庫匯入資料SRID 錯誤
+改正方法
+SELECT UpdateGeometrySRID('污染源總圖層_121','geom',3826);
+
+
+調整程式效能
+1. 用postgis將座標轉乘wgs84
+2. 在用Leaflet.Canvas-Markers來畫圖
+
+跟
+1. postgis select tm2x,tm2y
+2. 在用js 將tw97 座標轉成 wgs84
+3. 在用Leaflet.Canvas-Markers來畫圖
+
+上下的效能差了15秒左右!!!

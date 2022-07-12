@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>坐标轴</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // 提示設定（滑鼠懸浮到圖上的互動樣式） 顯示 series或 dataset設定的內容
+            tooltip: {
+                // 觸發
+                // 当trigger为’item’时只会显示该点的数据，为’axis’时显示该列下所有坐标轴所对应的数据。
+                trigger: 'axis',
+                // 軸指針
+                axisPointer: {
+                    // 交叉(滑鼠停留顯示座標)
+                    type: 'cross'
+                }
+            },
+            // 說明 顯示 legend或 dimensions或 source第一行設定的內容
+            legend: {},
+            // X座標
+            xAxis: [
+                {
+                    // 主座標
+                    type: 'category',
+                    // 軸刻度
+                    axisTick: {
+                        // 對齊標籤(對齊圖型)
+                        alignWithLabel: true
+                    },
+                    // 座標資料
+                    data: [
+                        '1月',
+                        '2月',
+                        '3月',
+                        '4月',
+                        '5月',
+                        '6月',
+                        '7月',
+                        '8月',
+                        '9月',
+                        '10月',
+                        '11月',
+                        '12月'
+                    ]
+                }
+            ],
+            // Y座標
+            yAxis: [
+                {
+                    // 數值軸，適用於連續數據。
+                    type: 'value',
+                    // 名稱
+                    name: '降水量',
+                    // 最小刻度
+                    min: 0,
+                    // 最大刻度
+                    max: 250,
+                    // 位置:右
+                    position: 'right',
+                    // 軸標籤
+                    axisLabel: {
+                        // formatter 格式化程序
+                        formatter: '{value} ml'
+                    }
+                },
+                {
+                    // 數值軸，適用於連續數據。
+                    type: 'value',
+                    // 名稱
+                    name: '温度',
+                    // 最小刻度
+                    min: 0,
+                    // 最大刻度
+                    max: 25,
+                    // 位置:左
+                    position: 'left',
+                    // 軸標籤
+                    axisLabel: {
+                        // formatter 格式化程序
+                        formatter: '{value} °C'
+                    }
+                }
+            ],
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 對應 yAxis
+                    name: '降水量',
+                    // 柱狀圖
+                    type: 'bar',
+                    // Y軸位置
+                    yAxisIndex: 0,
+                    // 數據
+                    data: [6, 32, 70, 86, 68.7, 100.7, 125.6, 112.2, 78.7, 48.8, 36.0, 19.3]
+                },
+                {
+                    // 對應 yAxis
+                    name: '温度',
+                    // 折線圖
+                    type: 'line',
+                    // 平滑曲線
+                    smooth: true,
+                    // Y軸位置
+                    yAxisIndex: 1,
+                    // 數據
+                    data: [
+                        6.0,
+                        10.2,
+                        10.3,
+                        11.5,
+                        10.3,
+                        13.2,
+                        14.3,
+                        16.4,
+                        18.0,
+                        16.5,
+                        12.0,
+                        5.2
+                    ]
+                }
+            ]
+        };
+        //#endregion
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/concepts/axis">官網範例連結</a>
+</body>
+
+</html>

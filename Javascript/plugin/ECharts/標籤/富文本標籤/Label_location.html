@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>標籤的位置</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    /*
+      对于折线图、柱状图、散点图等，均可以使用 label 来设置标签。标签的相对于图形元素的位置，
+      一般使用 label.position、label.distance 来配置。
+    */
+
+    //#region 指定图表的配置项和数据
+    option = {
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          // 散點圖
+          type: 'scatter',
+          // 符號大小
+          symbolSize: 160,
+          // 标记的图形(點)
+          // 提供類型：'circle', 'rect', 'roundRect', 'triangle', 'diamond', 'pin', 'arrow', 'none'
+          // roundRect 圓形矩形
+          symbol: 'roundRect',
+          // 數據 [x,y]座標
+          data: [[1, 1]],
+          // 標籤
+          label: {
+            // 正常
+            normal: {
+              // 修改 position 和 distance 的值试试
+              // 支持：'left', 'right', 'top', 'bottom', 'inside', 'insideTop', 'insideLeft', 'insideRight', 'insideBottom', 'insideTopLeft', 'insideTopRight', 'insideBottomLeft', 'insideBottomRight'
+              // 位置:上方
+              position: 'top',
+              // 距離
+              distance: 10,
+              // 展示
+              show: true,
+              // 標籤內容格式器，支持字符串模板和回調函數兩種形式，字符串模板與回調函數返回的字符串均支持用 \n 換行。
+              // {a}：系列名。
+              // {b}：数据名。
+              // {c}：数据值。
+              // {@xxx}：数据中名为 'xxx' 的维度的值，如 {@product} 表示名为 'product' 的维度的值。
+              // {@[n]}：数据中维度 n 的值，如 {@[3]} 表示维度 3 的值，从 0 开始计数。
+              // .join(要填的值) 抓取陣列的值 並用 要填的值作為間隔
+              formatter: ['Label Text'].join('\n'),
+              // 背景顏色
+              backgroundColor: '#eee',
+              // 邊框顏色
+              borderColor: '#555',
+              // 邊框寬度
+              borderWidth: 2,
+              // 邊界半徑(四角弧度)
+              borderRadius: 5,
+              // 內距的設定
+              padding: 10,
+              // 字體大小
+              fontSize: 18,
+              // 文字块的背景陰影長度。
+              shadowBlur: 3,
+              // 文字块的陰影顏色
+              shadowColor: '#888',
+              // 文字块陰影偏移X
+              shadowOffsetX: 0,
+              // 文字块陰影偏移Y
+              shadowOffsetY: 3,
+              // 邊框顏色
+              textBorderColor: '#000',
+              // 邊框寬度
+              textBorderWidth: 3,
+              // 字體顏色
+              color: '#fff'
+            }
+          }
+        }
+      ],
+      // X座標
+      xAxis: {
+        // 最大值
+        max: 2
+      },
+      // Y座標
+      yAxis: {
+        // 最大值
+        max: 2
+      }
+    };
+    //#endregion
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/label/rich-text">官網範例連結</a>
+</body>
+
+</html>

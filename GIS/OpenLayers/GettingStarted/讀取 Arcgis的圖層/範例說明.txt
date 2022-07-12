@@ -1,0 +1,14 @@
+範例說明
+讀取 Arcgis的圖層.html	讀取 Arcgis的圖層，並設定彈出視窗
+
+採用
+CSS：OpenLayers v6.9.0.css
+JS：OpenLayers v6.9.0.js、jQuery v3.6.0.js
+
+https://openlayers.org/	官網
+https://openlayers.org/en/latest/examples/attributions.html	 基本地圖展示
+https://openlayers.org/en/latest/examples/wmts.html  基本 WMTS展示
+https://viglino.github.io/ol-ext/examples/control/map.switcher.popup.html   圖層控制
+http://viglino.github.io/ol-ext/examples/layer/map.wmtscapabilities.html?lon=2.346439&lat=48.854790&z=15    WMTS控制
+https://openlayers.org/en/latest/apidoc/  api 的參考資料
+https://github.com/openlayers/openlayers  數據庫

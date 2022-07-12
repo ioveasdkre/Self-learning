@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS和 TMS(QGIS使用)-WMS 服務的 GIS 用戶注意事項</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <script>
+        // map('id') 地圖
+        // setView([地理坐標], 縮放級別)
+        // 設計一個籃子儲存地圖中心座標
+        var map = L.map('map', {
+            // 中心點
+            center: [0, 0],
+            // 縮放等級
+            zoom: 1,
+            // 坐標系
+            crs: L.CRS.EPSG4326
+        });
+    </script>
+
+    <!-- WMS 服務的 GIS 用戶注意事項 -->
+    <script>
+        var wmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', {
+            layers: 'TOPO-OSM-WMS'
+        }).addTo(map);
+    </script>
+
+    <!-- 傳單中的 TMS -->
+    <!-- 不明原因此範例無法使用 -->
+    <script>
+        // var tms_example = L.tileLayer('http://base_url/tms/1.0.0/example_layer@png/{z}/{x}/{y}.png', {
+        //     tms: true
+        // }).addTo(map);
+        // var layer = L.tileLayer('http://base_url/tms/1.0.0/tileset/{z}/{x}/{-y}.png').addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/wms/wms.html">官網範例連結</a>
+</body>
+</html>

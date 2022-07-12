@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>loading 動畫</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region fetchData [獲取數據]
+    function fetchData(cb) {
+      // 通过 setTimeout 模拟异步加载
+      setTimeout(function () {
+        // 設定 Json數據
+        cb({
+          categories: ['衬衫', '羊毛衫', '雪纺衫', '裤子', '高跟鞋', '袜子'],
+          data: [5, 20, 36, 10, 10, 20]
+        });
+      }, 3000);
+    }
+    //#endregion
+
+    //#region 初始 option
+    option = {
+      // 標頭
+      title: {
+        text: '异步数据加载示例'
+      },
+      // 提示設定（滑鼠懸浮到圖上的互動樣式） 顯示 series或 dataset設定的內容
+      tooltip: {},
+      // 說明 顯示 legend或 dimensions或 source第一行設定的內容
+      legend: {
+        // 數據
+        data: ['销量']
+      },
+      // X座標
+      xAxis: {
+        // 數據:[] 初始化
+        data: []
+      },
+      // Y座標
+      yAxis: {},
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          name: '销量',
+          // 柱狀圖
+          type: 'bar',
+          // 數據:[] 初始化
+          data: []
+        }
+      ]
+    };
+    //#endregion
+
+    // 顯示加載中
+    myChart.showLoading();
+
+    //#region 加載 jsonc後填入 setOption
+    fetchData(function (data) {
+      // 隱藏加載中
+      myChart.hideLoading();
+      // 設定選項
+      myChart.setOption({
+        // X座標
+        xAxis: {
+          // 數據:導入的 json
+          data: data.categories
+        },
+        // 系列設定（系列的資料）設定資料
+        series: [
+          {
+            // 根据名字对应到相应的系列
+            name: '销量',
+            // 數據:導入的 json
+            data: data.data
+          }
+        ]
+      });
+    });
+    //#endregion
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/data/dynamic-data/">官網範例連結</a>
+</body>
+
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查看動畫</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>查看動畫</h1>
+    <div id="map" class="map"></div>
+    <button id="rotate-left" title="Rotate clockwise">↻</button>
+    <button id="rotate-right" title="Rotate counterclockwise">↺</button>
+    <button id="pan-to-london">泛倫敦</button>
+    <button id="elastic-to-moscow">彈跳到莫斯科</button>
+    <button id="bounce-to-istanbul">飛往伊斯坦布爾</button>
+    <button id="spin-to-rome">旋轉到羅馬</button>
+    <button id="fly-to-bern">飛往伯爾尼</button>
+    <button id="rotate-around-rome">繞著羅馬轉</button>
+    <button id="tour">逛一圈</button>
+    <h4>此示例顯示如何使用該view.animate()方法運行一個或多個動畫。</h4>
+    <script>
+        // ol.proj.fromLonLat([經度,緯度],座標系統，預設 EPSG:3857)
+        var london = ol.proj.fromLonLat([-0.12755, 51.507222]);
+        // ol.proj.fromLonLat([經度,緯度],座標系統，預設 EPSG:3857)
+        var moscow = ol.proj.fromLonLat([37.6178, 55.7517]);
+        // ol.proj.fromLonLat([經度,緯度],座標系統，預設 EPSG:3857)
+        var istanbul = ol.proj.fromLonLat([28.9744, 41.0128]);
+        // ol.proj.fromLonLat([經度,緯度],座標系統，預設 EPSG:3857)
+        var rome = ol.proj.fromLonLat([12.5, 41.9]);
+        // ol.proj.fromLonLat([經度,緯度],座標系統，預設 EPSG:3857)
+        var bern = ol.proj.fromLonLat([7.4458, 46.95]);
+
+        // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+        var view = new ol.View({
+            // 地圖中心地點:[經度,緯度]
+            center: istanbul,
+            // 視圖縮放等級
+            zoom: 6
+        });
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 預加載。將低分辨率圖塊加載到preload級別。0 意味著沒有預加載。
+                    preload: 4,
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM()
+                })
+            ],
+            // 通過在動畫時加載圖塊來改善用戶體驗。 會使動畫在移動設備或慢速設備上卡頓。
+            // 動畫時加載圖層
+            loadTilesWhileAnimating: true,
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: view
+        });
+
+        // A bounce easing method (from https://github.com/DmitryBaranovskiy/raphael).
+        // 彈跳功能
+        function bounce(t) {
+            var s = 7.5625, p = 2.75, l;
+            if (t < (1 / p)) {
+                l = s * t * t;
+            } else {
+                if (t < (2 / p)) {
+                    t -= (1.5 / p);
+                    l = s * t * t + 0.75;
+                } else {
+                    if (t < (2.5 / p)) {
+                        t -= (2.25 / p);
+                        l = s * t * t + 0.9375;
+                    } else {
+                        t -= (2.625 / p);
+                        l = s * t * t + 0.984375;
+                    }
+                }
+            }
+            return l;
+        }
+
+        // An elastic easing method (from https://github.com/DmitryBaranovskiy/raphael).
+        // 彈性緩衝
+        function elastic(t) {
+            // Math.pow(數字, 幾次方) 計算次方
+            // Math.sin 返回一个 -1 到 1 之间的数值，表示给定角度（单位：弧度）的正弦值。
+            return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+        }
+
+        // 設計一個通用的觸發事件
+        function onClick(id, callback) {
+            // addEventListener 指定的監聽器註冊到EventTarget 上，當該對象觸發指定的事件時，指定的回調函數就會被執行。
+            document.getElementById(id).addEventListener('click', callback);
+        }
+
+        onClick('rotate-left', function () {
+            // 動畫
+            view.animate({
+                // 動畫結束時視圖的旋轉:旋轉弧度
+                // getRotation 抓取旋轉弧度
+                // Math.PI 圓周率 3.14..
+                rotation: view.getRotation() + Math.PI / 2
+            });
+        });
+
+        onClick('rotate-right', function () {
+            // 動畫
+            view.animate({
+                // 動畫結束時視圖的旋轉:旋轉弧度
+                // getRotation 抓取旋轉弧度
+                // Math.PI 圓周率 3.14..
+                rotation: view.getRotation() - Math.PI / 2
+            });
+        });
+
+        onClick('rotate-around-rome', function () {
+            // 旋轉動畫採用最短的弧線，所以動畫分為兩部分
+            // getRotation 抓取旋轉弧度
+            var rotation = view.getRotation();
+            // 動畫
+            view.animate({
+                // 動畫結束時視圖的旋轉:旋轉弧度
+                // Math.PI 圓周率 3.14..
+                rotation: rotation + Math.PI,
+                // 在旋轉或分辨率動畫期間保持固定的可選錨點(座標)。
+                anchor: rome,
+                // easing 動畫期間使用的緩動函數（默認為module:ol/easing.inAndOut）。將為每一幀調用該函數，並使用一個數字表示動畫持續時間的一小部分。該函數應返回一個介於 0 和 1 之間的數字，表示朝著目標狀態的進度。
+                // ol.easing.easeIn 開始緩慢並加速。
+                easing: ol.easing.easeIn
+            }, {
+                // 動畫結束時視圖的旋轉:旋轉弧度
+                // Math.PI 圓周率 3.14..
+                rotation: rotation + 2 * Math.PI,
+                // 在旋轉或分辨率動畫期間保持固定的可選錨點(座標)。
+                anchor: rome,
+                // easing 動畫期間使用的緩動函數（默認為module:ol/easing.inAndOut）。將為每一幀調用該函數，並使用一個數字表示動畫持續時間的一小部分。該函數應返回一個介於 0 和 1 之間的數字，表示朝著目標狀態的進度。
+                // ol.easing.easeOut 快速開始並放慢速度。
+                easing: ol.easing.easeOut
+            });
+        });
+
+        onClick('pan-to-london', function () {
+            // 動畫
+            view.animate({
+                // 地圖中心地點:[經度,緯度]
+                center: london,
+                // 動畫的持續時間（以毫秒為單位）。
+                duration: 2000
+            });
+        });
+
+        onClick('elastic-to-moscow', function () {
+            // 動畫
+            view.animate({
+                // 地圖中心地點:[經度,緯度]
+                center: moscow,
+                // 動畫的持續時間（以毫秒為單位）。
+                duration: 2000,
+                // 動畫期間使用的緩動函數（默認為module:ol/easing.inAndOut）。將為每一幀調用該函數，並使用一個數字表示動畫持續時間的一小部分。該函數應返回一個介於 0 和 1 之間的數字，表示朝著目標狀態的進度。
+                easing: elastic
+            });
+        });
+
+        onClick('bounce-to-istanbul', function () {
+            // 動畫
+            view.animate({
+                // 地圖中心地點:[經度,緯度]
+                center: istanbul,
+                // 動畫的持續時間（以毫秒為單位）。
+                duration: 2000,
+                // 動畫期間使用的緩動函數（默認為module:ol/easing.inAndOut）。將為每一幀調用該函數，並使用一個數字表示動畫持續時間的一小部分。該函數應返回一個介於 0 和 1 之間的數字，表示朝著目標狀態的進度。
+                easing: bounce
+            });
+        });
+
+        onClick('spin-to-rome', function () {
+            // 旋轉動畫採用最短的弧線，所以動畫分為兩部分
+            // getCenter 獲取視圖中心座標。
+            var center = view.getCenter();
+            // 動畫
+            view.animate({
+                // 地圖中心地點:[經度,緯度]
+                center: [
+                    center[0] + (rome[0] - center[0]) / 2,
+                    center[1] + (rome[1] - center[1]) / 2
+                ],
+                // Math.PI 圓周率 3.14..
+                rotation: Math.PI,
+                // 動畫期間使用的緩動函數（默認為module:ol/easing.inAndOut）。將為每一幀調用該函數，並使用一個數字表示動畫持續時間的一小部分。該函數應返回一個介於 0 和 1 之間的數字，表示朝著目標狀態的進度。
+                easing: ol.easing.easeIn
+            }, {
+                // 地圖中心地點:[經度,緯度]
+                center: rome,
+                // Math.PI 圓周率 3.14..
+                rotation: 2 * Math.PI,
+                // 動畫期間使用的緩動函數（默認為module:ol/easing.inAndOut）。將為每一幀調用該函數，並使用一個數字表示動畫持續時間的一小部分。該函數應返回一個介於 0 和 1 之間的數字，表示朝著目標狀態的進度。
+                easing: ol.easing.easeOut
+            });
+        });
+
+        // 飛向
+        function flyTo(location, done) {
+            // 動畫的持續時間（以毫秒為單位）。
+            var duration = 2000;
+            // getCenter 獲取視圖縮放等級。
+            var zoom = view.getZoom();
+            var parts = 2;
+            var called = false;
+            // 打(飛)回來
+            function callback(complete) {
+                --parts;
+                if (called) {
+                    return;
+                }
+                if (parts === 0 || !complete) {
+                    called = true;
+                    done(complete);
+                }
+            }
+            // 動畫
+            view.animate({
+                // 地圖中心地點:[經度,緯度]
+                center: location,
+                // 動畫的持續時間（以毫秒為單位）。
+                duration: duration
+            }, callback);
+            // 動畫
+            view.animate({
+                // 視圖縮放等級
+                zoom: zoom - 1,
+                // 動畫的持續時間（以毫秒為單位）。
+                duration: duration / 2
+            }, {
+                // 視圖縮放等級
+                zoom: zoom,
+                // 動畫的持續時間（以毫秒為單位）。
+                duration: duration / 2
+            }, callback);
+        }
+
+        onClick('fly-to-bern', function () {
+            flyTo(bern, function () { });
+        });
+
+        // 逛一圈
+        function tour() {
+            // 五個座標點
+            var locations = [london, bern, rome, moscow, istanbul];
+            var index = -1;
+            function next(more) {
+                if (more) {
+                    ++index;
+                    // 抓取 地點長度
+                    if (index < locations.length) {
+                        var delay = index === 0 ? 0 : 750;
+                        // setTimeout(fun, 毫秒)設置一個定時器，一旦定時器到期，它就會執行一個函數或指定的一段代碼。
+                        setTimeout(function () {
+                            flyTo(locations[index], next);
+                        }, delay);
+                    } else {
+                        alert('遊覽完成');
+                    }
+                } else {
+                    alert('旅遊取消');
+                }
+            }
+            next(true);
+        }
+
+        onClick('tour', tour);
+    </script>
+    <br><a href="https://openlayers.org/en/v4.6.5/examples/animation.html">官方範例</a>
+</body>
+
+</html>

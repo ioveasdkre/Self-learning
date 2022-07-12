@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>無障礙地圖</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+
+    a.skiplink {
+        position: absolute;
+        clip: rect(1px, 1px, 1px, 1px);
+        padding: 0;
+        border: 0;
+        height: 1px;
+        width: 1px;
+        overflow: hidden;
+    }
+
+    a.skiplink:focus {
+        clip: auto;
+        height: auto;
+        width: auto;
+        background-color: rgb(10, 9, 9);
+        padding: 0.3em;
+    }
+
+    #map:focus {
+        outline: #4A74A8 solid 0.15em;
+    }
+</style>
+
+<body>
+    <h1>無障礙地圖</h1>
+    <a class="skiplink" href="#map">Go to map</a>
+    <div id="map" class="map" tabindex="0"></div>
+    <button id="zoom-out">地圖縮小</button>
+    <button id="zoom-in">地圖放大</button>
+    <h4>此頁面的map元素將其tabindex屬性設置為"0"，使其可聚焦。要聚焦地圖元素，您可以使用“tab”鍵導航到它，也可以使用跳過鏈接。當map元素被聚焦時，+ 和 - 鍵可用於放大和縮小，箭頭鍵可用於平移。</h4>
+    <h4>單擊地圖下方的“放大”和“縮小”按鈕可放大和縮小地圖。您可以使用“tab”鍵導航到按鈕，然後按“enter”鍵觸發縮放操作。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                }),
+            ],
+            // 最初添加到地圖的控件。
+            controls: ol.control.defaults({
+                // 來源選項
+                attributionOptions: {
+                    // 指定是否可以折疊來源(版權資訊)。
+                    collapsible: false
+                }
+            }),
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2,
+            })
+        });
+
+        // 放大地圖
+        document.getElementById('zoom-out').onclick = function () {
+            // 獲取與此地圖關聯的視圖。視圖管理諸如中心和分辨率之類的屬性。
+            const view = map.getView();
+            // 獲取當前縮放級別。如果視圖不限制分辨率，或者交互或動畫正在進行，則此方法可能返回非整數縮放級別。
+            const zoom = view.getZoom();
+            // 縮放到特定的縮放級別。任何分辨率限制都將適用。
+            view.setZoom(zoom - 1);
+        };
+
+        // 縮小地圖
+        document.getElementById('zoom-in').onclick = function () {
+            // 獲取與此地圖關聯的視圖。視圖管理諸如中心和分辨率之類的屬性。
+            const view = map.getView();
+            // 獲取當前縮放級別。如果視圖不限制分辨率，或者交互或動畫正在進行，則此方法可能返回非整數縮放級別。
+            const zoom = view.getZoom();
+            // 縮放到特定的縮放級別。任何分辨率限制都將適用。
+            view.setZoom(zoom + 1);
+        };
+    </script>
+    <br><a href="https://openlayers.org/en/v4.6.5/examples/accessible.html">官方範例</a>
+</body>
+
+</html>

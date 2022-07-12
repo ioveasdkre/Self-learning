@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聚類特徵</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>聚類特徵</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <form>
+        <div class="form-group">
+            <label for="distance" class="col-form-label">集群距離</label>
+            <input id="distance" class="form-control-range" type="range" min="0" max="200" step="1" value="40" />
+            <small class="form-text text-muted">
+                要素將聚集在一起的距離。
+            </small>
+        </div>
+        <div class="form-group">
+            <label for="min-distance" class="col-form-label">最小距離</label>
+            <input id="min-distance" class="form-control-range" type="range" min="0" max="200" step="1" value="20" />
+            <small class="form-text text-muted">
+                集群之間的最小距離。 不能大於配置的距離。
+            </small>
+        </div>
+    </form>
+    <h4>此示例說明如何對點要素進行聚類。</h4>
+    <script>
+        const distanceInput = document.getElementById('distance');
+        const minDistanceInput = document.getElementById('min-distance');
+
+        const count = 20000;
+        // 全域物件被用於建構陣列
+        const features = new Array(count);
+        const e = 4500000;
+        for (let i = 0; i < count; ++i) {
+            // Math.random() 回傳一個偽隨機小數 (pseudo-random)，小數也稱浮點數； 介於0到1之間(包含 0，不包含1) 。
+            // Math.random() * 最大值 回傳隨機數
+            const coordinates = [2 * e * Math.random() - e, 2 * e * Math.random() - e];
+            // ol.Feature 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+            // ol.geom.Point(座標) 點幾何。
+            features[i] = new ol.Feature(new ol.geom.Point(coordinates));
+        }
+
+        // 為矢量圖層提供特徵源(geojson檔)。
+        const source = new ol.source.Vector({
+            // 特徵。
+            features: features,
+        });
+
+        // 對矢量數據進行聚類的圖層源。
+        const clusterSource = new ol.source.Cluster({
+            // 要素將聚集在一起的距離（以像素為單位）
+            distance: parseInt(distanceInput.value, 10),
+            // 範圍之間的最小距離（以像素為單位）。將被限制在配置的距離內。
+            minDistance: parseInt(minDistanceInput.value, 10),
+            // 來源。
+            source: source
+        });
+
+        var styleCache = {};
+        // 為矢量圖層提供特徵源(geojson檔)。
+        var clusters = new ol.layer.Vector({
+            // 來源。
+            source: clusterSource,
+            // 風格
+            style: function (feature) {
+                // get(指定元素) 返回某個 map對像中的一個指定元素。
+                // length 長度
+                var size = feature.get('features').length;
+                var style = styleCache[size];
+                if (!style) {
+                    // 設定風格
+                    style = new ol.style.Style({
+                        // 圖像風格。:為矢量特徵設置圓形樣式。
+                        image: new ol.style.Circle({
+                            // 圓半徑。
+                            radius: 10,
+                            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+                            stroke: new ol.style.Stroke({
+                                // 邊框顏色
+                                color: '#fff'
+                            }),
+                            // 填充樣式:設置矢量特徵的填充樣式。
+                            fill: new ol.style.Fill({
+                                // 填滿
+                                color: '#3399CC'
+                            })
+                        }),
+                        // 文字樣式:設置矢量特徵的文本樣式。
+                        text: new ol.style.Text({
+                            // 文字內容。
+                            text: size.toString(),
+                            // 填充樣式。如果沒有提供，我們將使用深色填充樣式（#333）。:設置矢量特徵的填充樣式。
+                            fill: new ol.style.Fill({
+                                // 顏色
+                                color: '#fff'
+                            })
+                        })
+                    });
+                    styleCache[size] = style;
+                }
+                return style;
+            }
+        });
+
+        // Tile = TileLayer
+        var raster = new ol.layer.Tile({
+            // 來源:OpenStreetMap 切片服務器的圖層源。
+            source: new ol.source.OSM()
+        });
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [raster, clusters],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2
+            })
+        });
+
+        const distanceHandler = function () {
+            // 設置要素聚集在一起的距離。
+            clusterSource.setDistance(parseInt(distanceInput.value, 10));
+        };
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        distanceInput.addEventListener('input', distanceHandler);
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        distanceInput.addEventListener('change', distanceHandler);
+
+        const minDistanceHandler = function () {
+            // 設置集群之間的最小距離。將被限制在配置的距離內。
+            clusterSource.setMinDistance(parseInt(minDistanceInput.value, 10));
+        };
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        minDistanceInput.addEventListener('input', minDistanceHandler);
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        minDistanceInput.addEventListener('change', minDistanceHandler);
+
+        map.on('click', (e) => {
+            // getFeatures 獲取與視口上給定像素相交的最頂層特徵。
+            // then 回傳一個 Promise (en-US) 物件。
+            clusters.getFeatures(e.pixel).then((clickedFeatures) => {
+                if (clickedFeatures.length) {
+                    // 獲取聚類坐標
+                    // get(指定元素) 返回某個 map對像中的一個指定元素。
+                    const features = clickedFeatures[0].get('features');
+                    if (features.length > 1) {
+                        // 構建一個包含所有給定坐標的範圍。
+                        const extent = boundingExtent(
+                            // getGeometry 獲取特徵的默認幾何。
+                            // getCoordinates 返回點的坐標。
+                            features.map((r) => r.getGeometry().getCoordinates())
+                        );
+                        // getView 獲取用作地圖視口的元素。
+                        // fit 根據給定的地圖大小和邊界擬合給定的幾何圖形或範圍。
+                        map.getView().fit(extent, {
+                            // 動畫的持續時間（以毫秒為單位）。默認情況下，目標範圍內沒有動畫。
+                            duration: 1000,
+                            // 要在視圖內清除的填充（以像素為單位）(註:內距)。數組中的值是頂部、右側、底部和左側填充。
+                            padding: [50, 50, 50, 50]
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/cluster.html">官方範例</a>
+</body>
+
+</html>

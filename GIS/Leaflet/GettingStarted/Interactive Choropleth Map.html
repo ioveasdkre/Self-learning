@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>交互式等值線圖</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+      crossorigin=""
+    />
+
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script
+      src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+      integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+      crossorigin=""
+    ></script>
+  </head>
+  <style>
+    /* 準備頁面 */
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    #map {
+      width: 800px;
+      height: 500px;
+    }
+
+    /* 顯示區域資訊 */
+    .info {
+      padding: 6px 8px;
+      font: 14px/16px Arial, Helvetica, sans-serif;
+      background: white;
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
+    }
+
+    .info h4 {
+      margin: 0 0 5px;
+      color: #777;
+    }
+
+    /* 人口密布圖 */
+    .legend {
+      text-align: left;
+      line-height: 18px;
+      color: #555;
+    }
+
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+  </style>
+  <body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <!-- 連結 Interactive Choropleth Map.js檔 -->
+    <script
+      type="text/javascript"
+      src="js/Interactive Choropleth Map.js"
+    ></script>
+
+    <!-- 基本州地圖 -->
+    <script type="text/javascript">
+      // map('id') 地圖
+      // setView([地理坐標], 縮放級別)
+      // 設計一個籃子儲存地圖中心座標
+      var map = L.map("map").setView([37.8, -96], 4);
+
+      // 圖層
+      L.tileLayer(
+        "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw",
+        {
+          // 最大縮放
+          maxZoom: 18,
+          // 可以放入版權資訊的字串，格式為 html
+          attribution:
+            'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+            'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+          id: "mapbox/light-v9",
+          // 地圖尺寸
+          tileSize: 512,
+          // 地圖偏移
+          zoomOffset: -1,
+        }
+      ).addTo(map);
+
+      // geoJSON(變數名稱) or geoJSON([變數名稱, 變數名稱])可使用 js裡的變數名稱
+      // 抓取 statesData裡的所有數據，包含 style(下個 script有使用替換 style的方式)
+      //var geojson = L.geoJson(statesData).addTo(map);
+    </script>
+
+    <script>
+      // 根據人口密度的顏色
+      function getColor(d) {
+        return d > 1000
+          ? "#800026"
+          : d > 500
+          ? "#BD0026"
+          : d > 200
+          ? "#E31A1C"
+          : d > 100
+          ? "#FC4E2A"
+          : d > 50
+          ? "#FD8D3C"
+          : d > 20
+          ? "#FEB24C"
+          : d > 10
+          ? "#FED976"
+          : "#FFEDA0";
+      }
+
+      function style(feature) {
+        return {
+          // 填滿
+          fillColor: getColor(feature.properties.density),
+          // 框線寬度
+          weight: 2,
+          // 框線透明度
+          opacity: 1,
+          // 框色
+          // white 白色
+          color: "white",
+          // 虛線
+          dashArray: "3",
+          // 填滿透明度
+          fillOpacity: 0.7,
+        };
+      }
+
+      // geoJSON(變數名稱) or geoJSON([變數名稱, 變數名稱])可使用 js裡的變數名稱
+      // 改變 style
+      // 抓取 statesData裡的所有數據，並改變 style(下個 script有使用加入事件處理)
+      // L.geoJson(statesData, {style: style}).addTo(map);
+    </script>
+
+    <!-- 自定義信息控件 -->
+    <script>
+      // control 控制
+      var info = L.control();
+
+      // onAdd 再添加(加入)
+      info.onAdd = function (map) {
+        // create('標籤', 'class名稱') 新增一筆資料
+        // DomUtil 新增資料使用
+        this._div = L.DomUtil.create("div", "info"); // create a div with a class "info"
+        // update 更新
+        this.update();
+        return this._div;
+      };
+
+      // method that we will use to update the control based on feature properties passed
+      // update 更新
+      info.update = function (props) {
+        // innerHTML html內部元素
+        // 參數 ? ture:false
+        this._div.innerHTML =
+          "<h4>US Population Density</h4>" +
+          (props
+            ? "<b>" +
+              props.name +
+              "</b><br />" +
+              props.density +
+              " people / mi<sup>2</sup>"
+            : "Hover over a state");
+      };
+
+      info.addTo(map);
+    </script>
+
+    <!-- 添加交互 -->
+    <script>
+      function style_fu() {
+        return {
+          // 框線寬度
+          weight: 5,
+          // 框色
+          color: "#666",
+          // 虛線
+          dashArray: "",
+          // 填滿透明度
+          fillOpacity: 0.7,
+        };
+      }
+
+      var style_data = {
+        // 框線寬度
+        weight: 5,
+        // 框色
+        color: "#666",
+        // 虛線
+        dashArray: "",
+        // 填滿透明度
+        fillOpacity: 0.7,
+      };
+
+      function style_fudata() {
+        return {
+          style_data,
+        };
+      }
+
+      // 定義一個事件偵聽器
+      function highlightFeature(e) {
+        // target 獲取觸發特定事件的元素
+        var layer = e.target;
+
+        // setStyle 設定樣式
+        // layer.setStyle(style_data);
+        // layer.setStyle(style_fu());
+        // layer.setStyle(style_fudata().style_data);
+
+        // setStyle 設定樣式
+        layer.setStyle({
+          // 框線寬度
+          weight: 5,
+          // 框色
+          color: "#666",
+          // 虛線
+          dashArray: "",
+          // 填滿透明度
+          fillOpacity: 0.7,
+        });
+
+        // 判斷瀏覽器不是 ie且 Google且edge
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+          // bringToFront 放置最上層(前面)
+          layer.bringToFront();
+        }
+
+        info.update(layer.feature.properties);
+      }
+
+      var geojson;
+      var extmaps = new L.layerGroup();
+      var extmaps2;
+
+      // 設計一個滑鼠移出時的方法
+      function resetHighlight(e) {
+        // resetStyle 重製樣式
+        // target 獲取觸發特定事件的元素
+        geojson.resetStyle(e.target);
+        console.log(geojson.resetStyle(e.target));
+        //info.update();
+      }
+
+      // 定義一個click縮放到狀態的偵聽器
+      function zoomToFeature(e) {
+        // fitbounds 動畫持續時間
+        // target 獲取觸發特定事件的元素
+        // getBounds 點擊觸發近距離觀看該區域
+        map.fitBounds(e.target.getBounds());
+      }
+
+      // 事件設定
+      function onEachFeature(feature, layer) {
+        layer.on({
+          // mouseover 滑鼠移到時觸發事件
+          mouseover: highlightFeature,
+          // mouseout 滑鼠移出時觸發事件
+          mouseout: resetHighlight,
+          // click 滑鼠點擊時觸發事件
+          click: zoomToFeature,
+        });
+      }
+
+      // geoJSON(變數名稱) or geoJSON([變數名稱, 變數名稱])可使用 js裡的變數名稱
+      geojson = L.geoJson(statesData, {
+        style: style,
+        // onEachFeature 獲得事件設定
+        // onEachFeature 自己設計的方法
+        onEachFeature: onEachFeature,
+      });
+      console.log(geojson);
+
+      // 將指定圖層添加到地圖
+      extmaps.addLayer(geojson);
+      // 添加到地圖
+      extmaps.addTo(map);
+    </script>
+
+    <!-- 自定義圖例控件 -->
+    <script>
+      // control 控制
+      // position 位置 bottomright 右下角
+      var legend = L.control({ position: "bottomright" });
+
+      // onAdd 再添加(加入)
+      legend.onAdd = function (map) {
+        // create('標籤', 'class名稱') 新增一筆資料
+        // DomUtil 新增資料使用
+        var div = L.DomUtil.create("div", "info legend"),
+          // 設計一個籃子儲存區域密度
+          grades = [0, 10, 20, 50, 100, 200, 500, 1000],
+          labels = [];
+
+        // loop through our density intervals and generate a label with a colored square for each interval
+        // 抓取區域密度長度
+        // getColor 根據人口密度的顏色
+        // innerHTML html內部元素
+        for (var i = 0; i < grades.length; i++) {
+          div.innerHTML +=
+            '<i style="background:' +
+            getColor(grades[i] + 1) +
+            '"></i> ' +
+            grades[i] +
+            (grades[i + 1] ? "&ndash;" + grades[i + 1] + "<br>" : "+");
+        }
+
+        return div;
+      };
+
+      legend.addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/choropleth/">官網範例連結</a>
+  </body>
+</html>

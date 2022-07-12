@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴展傳單：處理程序和控件-處理程序</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+
+    #info {
+        position:absolute; 
+        top:0; 
+        right:0; 
+        width: 20em; 
+        height: 7.5em; 
+        background: rgba(255,255,255,.5); 
+        z-index:500; 
+        font: 12px Sans;
+    }
+
+    .crsMarker {
+        border-top: 2px green solid;
+        border-left: 2px green solid;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+    <div id="info"></div>
+
+    <!-- 處理程序 -->
+    <!-- Map handlers 是 Leaflet 1.0 中的一個新概念，它們的功能是處理來​​自瀏覽器的 DOM 事件（如click、dblclick或mousewheel）並改變地圖的狀態。
+    處理程序相對簡單：它們只需要一個addHooks()方法（在映射中啟用處理程序時運行）和一個removeHooks()，在禁用處理程序時運行。處理程序的骨架是： -->
+    <script>
+        var trd = [63.41, 10.41];
+        
+        // Handler.extend 地圖交互處理程序的抽像類
+        L.TiltHandler = L.Handler.extend({
+            addHooks: function() {
+                // L.DomEvent 用於DOM事件的method：
+                L.DomEvent.on(window, 'deviceorientation', this._tilt, this);
+            },
+        
+            // L.DomEvent 用於DOM事件的method：
+            removeHooks: function() {
+                L.DomEvent.off(window, 'deviceorientation', this._tilt, this);
+            },
+            
+            _tilt: function(ev) {
+                // 將 Gamma 角視為水平平移（1 度 = 1 像素），將 Beta 角視為垂直平移
+                var info;
+                // point 用x和y坐標（以像素為單位）表示一個點。
+                var offset = L.point(ev.gamma, ev.beta)
+                if (offset) {
+                    // panBy 按給定的像素數（動畫）平移地圖。
+                    this._map.panBy(offset);
+                    info = ev.gamma + ',' + ev.beta;
+                } else {
+                    info = 'Device orientation not detected'
+                }
+                // document.getElementById('nameid') 抓取id
+                // innerHTML html內部元素
+                document.getElementById('info').innerHTML = info
+            }
+        });
+        
+        // MyClass.addInitHook()向類添加構造函數掛鉤。
+        L.Map.addInitHook('addHandler', 'tilt', L.TiltHandler);
+
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 中心點
+            center: [0, 0],
+            // 縮放等級
+            zoom: 1,
+            // 傾斜
+            tilt: true
+        });
+
+        // tileLayer(地圖框網址, {})圖層
+        var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>'
+        }).addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/extending/extending-3-controls.html">官網範例連結</a>
+</body>
+</html>

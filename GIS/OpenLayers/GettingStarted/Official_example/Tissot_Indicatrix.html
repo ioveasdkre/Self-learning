@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>座標系統及 WMS底圖使用</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>座標系統及 WMS底圖使用</h1>
+    <h4>EPSG:4326</h4>
+    <div id="map4326" class="map"></div>
+    <h4>EPSG:3857</h4>
+    <div id="map3857" class="map"></div>
+    <h4>天梭指標圖示例。上面的EPSG:4326地圖是地圖。底部的那個是EPSG:3857。</h4>
+    <script>
+        // 在客戶端呈現的矢量數據。
+        const vectorLayer4326 = new ol.layer.Vector({
+            // 為矢量圖層(geojson)提供特徵源。
+            source: new ol.source.Vector(),
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vectorLayer3857 = new ol.layer.Vector({
+            // 為矢量圖層(geojson)提供特徵源。
+            source: new ol.source.Vector(),
+        });
+
+        // 宣告一個 Map 物件
+        const map4326 = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:來自 WMS 服務器的切片數據的圖層源。
+                    source: new ol.source.TileWMS({
+                        // 網址
+                        url: 'https://ahocevar.com/geoserver/wms',
+                        // WMS 請求參數
+                        params: {
+                            'LAYERS': 'ne:NE1_HR_LC_SR_W_DR',
+                            'TILED': true,
+                        },
+                    }),
+                }),
+                vectorLayer4326,
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map4326',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標系統:WGS84經緯度（全球性資料，如：GPS） ＝> EPSG:4326
+                projection: 'EPSG:4326',
+                // 座標
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2,
+            }),
+        });
+
+        // 宣告一個 Map 物件
+        const map3857 = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:來自 WMS 服務器的切片數據的圖層源。
+                    source: new ol.source.TileWMS({
+                        // 網址
+                        url: 'https://ahocevar.com/geoserver/wms',
+                        // WMS 請求參數
+                        params: {
+                            'LAYERS': 'ne:NE1_HR_LC_SR_W_DR',
+                            'TILED': true,
+                        },
+                    }),
+                }),
+                vectorLayer3857,
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map3857',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2,
+            }),
+        });
+
+        // 半徑
+        const radius = 800000;
+        let x, y;
+        for (x = -180; x < 180; x += 30) {
+            for (y = -90; y <= 90; y += 30) {
+                // circular（中心，半徑，多邊形數量，球體的半徑）(註:參數3 4可選) “圓形”多邊形。
+                const circle4326 = ol.geom.Polygon.circular([x, y], radius, 64);
+                // 將 4326畫完的圓轉成 3857
+                // clone 製作幾何圖形的完整副本。
+                // transform(來源, 目標) 將幾何體的每個坐標從一個坐標參考系統轉換為另一個。
+                const circle3857 = circle4326.clone().transform('EPSG:4326', 'EPSG:3857');
+                // getSource 獲取圖層源。
+                // addFeature 向源添加單個功能。
+                // ol.Feature 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+                vectorLayer4326.getSource().addFeature(new ol.Feature(circle4326));
+                // getSource 獲取圖層源。
+                // addFeature 向源添加單個功能。
+                // ol.Feature 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+                vectorLayer3857.getSource().addFeature(new ol.Feature(circle3857));
+            }
+        }
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/tissot.html">官方範例</a>
+</body>
+
+</html>

@@ -1,0 +1,134 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+
+    <!--因為有用到sweetalert Swal-->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+</head>
+
+<body>
+    <input type="button" value=" 按 我 至 現 在 位 置 " onclick="GetLocation()" />
+    <div id="mapid" style="width: 800px; height: 600px;"></div>
+    <script>
+        var mymap;
+        var GisFunc = {
+            // 檢查 GPS是否啟用
+            // successCallback 請求成功時調用的函數
+            // errorCallback 請求失敗時調用的函數
+            CheckGpsEnabled: function (successCallback, errorCallback) {
+                // navigator.geolocation回傳一個唯讀的 Geolocation 物件，透過這個物件可以存取設備的位置訊息。同時也允許網站或應用程式根據使用者的位置提供客製化的結果。
+                if (navigator.geolocation) {//偵測瀏覽器是否有定位的功能
+                    if (!successCallback) {//是否有成功回傳的function successCallback
+                        successCallback = function () {
+                            // Pass;
+                        };
+                    }
+                    // 獲取設備當前的位置。
+                    navigator.geolocation.getCurrentPosition(
+                        successCallback,
+                        function (err) {
+                            // 判斷是否回傳錯誤
+                            if (errorCallback) {
+                                // 回傳錯誤
+                                errorCallback(err);
+                            }
+                            else {
+                                // 錯誤訊息
+                                var _Msg = err.message;
+                                // 判斷用戶使否拒絕存取座標定位
+                                if (_Msg === "User denied Geolocation") {
+                                    // 使用 Swal.fire('...', '...') 簡單寫法時，第一個參數為 title、第二個參數為 html，都允許內嵌 HTML，但有簡單的 XSS 防護(內嵌 <script> 會被忽略)。若訊息內容包含 < > 等符號怕被當成 HTML 導致錯亂，可改寫為 Swal.fire({ titleText: '...', text: '...' })
+                                    Swal.fire({
+                                        type: "error",
+                                        text: "請開啟定位服務繼續!!"
+                                    });
+                                }
+                                else {
+                                    // 使用 Swal.fire('...', '...') 簡單寫法時，第一個參數為 title、第二個參數為 html，都允許內嵌 HTML，但有簡單的 XSS 防護(內嵌 <script> 會被忽略)。若訊息內容包含 < > 等符號怕被當成 HTML 導致錯亂，可改寫為 Swal.fire({ titleText: '...', text: '...' })
+                                    Swal.fire({
+                                        type: "error",
+                                        text: "GetLocation Err:" + _Msg
+                                    });
+                                }
+                            }
+                        },
+                        {
+                            enableHighAccuracy: true //如果true並且如果設備能夠提供更準確的位置
+                            , timeout: 5000 //表示允許設備返回位置的最大時間長度（以毫秒為單位）,默認值為Infinity，表示getCurrentPosition()在該位置可用之前不會返回。
+                            //maximumAge:0 //可接受的可能緩存位置的最大壽命（以毫秒為單位），表示設備無法使用緩存的位置，必須嘗試檢索實際的當前位置。如果設定為Infinity則設備必須返回緩存的位置，而不管其壽命如何。
+                        }
+                    );
+                }
+            }
+        };
+
+
+        /** 取得座標定位 */
+        function GetLocation(callback, callbackParam) {
+            // navigator.geolocation回傳一個唯讀的 Geolocation 物件，透過這個物件可以存取設備的位置訊息。同時也允許網站或應用程式根據使用者的位置提供客製化的結果。
+            if (!navigator.geolocation) {
+                // 使用 Swal.fire('...', '...') 簡單寫法時，第一個參數為 title、第二個參數為 html，都允許內嵌 HTML，但有簡單的 XSS 防護(內嵌 <script> 會被忽略)。若訊息內容包含 < > 等符號怕被當成 HTML 導致錯亂，可改寫為 Swal.fire({ titleText: '...', text: '...' })
+
+                Swal.fire({
+                    type: "error",
+                    text: "請開啟定位服務繼續!!"
+                });
+            }
+
+            // 檢查 GPS是否啟用
+            GisFunc.CheckGpsEnabled(
+                /**
+                 * 設定座標
+                 * @@param result 使用者座標
+                 */
+                function (result) {
+                    // 座標
+                    var _coords = result.coords;
+                    UserLoc = {
+                        // 緯度
+                        lat: _coords.latitude,
+                        // 經度
+                        lng: _coords.longitude
+                    };
+                    // 使用給定的動畫選項設置地圖視圖（地理中心和縮放）。
+                    mymap.setView([UserLoc.lat, UserLoc.lng], 18);
+                    // marker([地理坐標]) 標記符號(地圖上標記符號)
+                    L.marker([UserLoc.lat, UserLoc.lng]).addTo(mymap)
+                        // 點擊彈出視窗
+                        .bindPopup('現在位置')
+                        // 載入頁面時，打開彈出視窗
+                        .openPopup();
+                    // 判斷是否執行到最後
+                    (callback && callback(callbackParam));
+                },
+                null
+            );
+        }
+    </script>
+    <script>
+        (function () {
+            // renderer: L.canvas() 在地圖上繪製矢量圖層的默認方法。:創建具有給定選項的 Canvas 渲染器。
+            // setView 使用給定的動畫選項設置地圖視圖（地理中心和縮放）。
+            mymap = L.map('mapid', { renderer: L.canvas() }).setView([25.066284, 121.53772], 13);
+            //載入TGOS的台灣底圖
+            // tileLayer 實例化一個給定一個URL template和可選的選項對象的平鋪層對象。
+            var baseMapTGOS = L.tileLayer('http://maps.nlsc.gov.tw/S_Maps/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=EMAP&STYLE=_null&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2Fpng', {
+                // 最大縮放
+                maxZoom: 18
+
+            }).addTo(mymap);
+
+
+        })();
+
+    </script>
+</body>
+
+</html>

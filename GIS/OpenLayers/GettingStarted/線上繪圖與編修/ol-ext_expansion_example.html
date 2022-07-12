@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> 線上繪圖與編修(取消復原流程/撤銷還原流程)</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- Undo_Redo.css 官方設定 -->
+    <link rel="stylesheet" href="../css/Undo_Redo.css" type="text/css">
+    <!-- jQuery_3.6.0.js -->
+    <script src="../js/jQuery_3.6.0.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="../css/font-awesome.min.css" type="text/css">
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="../OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="../OpenLayers_Kit/ol.js"></script>
+    <!-- ol-ext 擴充套件 -->
+    <link rel="stylesheet" href="../css/ol-ext.css" type="text/css">
+    <script src="../js/ol-ext.js"></script>
+</head>
+<style>
+    .ol-button i {
+        color: inherit;
+    }
+
+    .ol-button.red button,
+    .ol-button.green button,
+    .ol-button.blue button {
+        color: #f00;
+        background-color: currentColor;
+        border: 2px solid currentColor;
+        width: 1em;
+        height: 1em;
+        border-radius: 0;
+    }
+
+    .ol-button.green button {
+        color: #0f0;
+    }
+
+    .ol-button.blue button {
+        color: #00f;
+    }
+
+    .ol-button.red button:hover,
+    .ol-button.green button:hover,
+    .ol-button.blue button:hover {
+        background-color: currentColor !important;
+        border-color: #000;
+    }
+
+    .options ul {
+        cursor: pointer;
+        margin: 0;
+        padding: 0;
+    }
+
+    .options li {
+        padding: .1em .5em;
+    }
+
+    .options li:hover {
+        background-color: #369;
+        color: #fff;
+    }
+
+    .options .redo li {
+        opacity: .4;
+    }
+
+    .options button {
+        margin: auto;
+        display: block;
+    }
+
+    .options li:before {
+        font-family: FontAwesome;
+        display: inline-block;
+        width: 1.4em;
+        height: 1.4em;
+        border-radius: .3em;
+        background-color: #369;
+        color: #fff;
+        padding: .2em;
+        text-align: center;
+        box-sizing: border-box;
+        margin-right: .3em;
+    }
+
+    .options li.addfeature:before {
+        content: "\f067";
+    }
+
+    .options li.modify:before {
+        content: "\f040";
+    }
+
+    .options li.translate:before {
+        content: "\f0b2";
+    }
+
+    .options li.rotate:before {
+        content: "\f01e";
+    }
+
+    .options li.scale:before {
+        content: "\f047";
+    }
+
+    .options li.delete:before {
+        content: "\f1f8";
+    }
+
+    .options li.split:before {
+        content: "\f0c4";
+    }
+
+    .options li.color:before {
+        content: "\f1fc";
+    }
+</style>
+
+<body>
+    <h1> 線上繪圖與編修(取消復原流程/撤銷還原流程)</h1>
+    <div class="info">
+        <p>
+            <i>ol/interaction/UndoRedo</i> 是在地圖上處理復原/取消復原的交互。
+        </p>
+        <p>
+            <span class="experimental">實驗性的</span>
+            此功能仍在進行中，可能有問題。
+        </p>
+        <p>
+            只需將交互添加到地圖即可使其工作。
+            它將監視地圖中的所有矢量源和所有交互。
+        <ul>
+            <li>
+                使用 <i>undo()</i> 和 <i>redo()</i> 方法來撤銷最後記錄的操作。
+            </li>
+            <li>
+                <i>shift()</i> 方法允許您從復原堆棧中刪除操作。
+            </li>
+            <li>
+                使用 <i>getStack()</i> 方法獲得堆棧中當前復原操作的列表。
+            </li>
+            <li>
+                <i>change:add</i>, <i>change:remove</i> 或 <i>change:clear</i> 事件當復原堆棧更改時觸發。
+            </li>
+            <li>
+                復原可以堆疊在一個塊中，使它們一次復原。
+                只需將 <i>blockStart()</i> 和 <i>blockEnd()</i> 之間的操作括起來。
+            </li>
+            <li>
+                您可以通過包含操作之間的操作在地圖上堆疊操作
+                <i>undoblockstart</i> 和 <i>undoblockend</i> 事件
+                (<i>map.dispatchEvent('undoblockstart')</i> 和 <i>map.dispatchEvent('undoblockend')</i>).
+            </li>
+            <li>
+                使用 <i>setMaxLength()</i> 和 <i>setMaxSize()</i> 方法設置最大堆棧長度和最大堆大小。
+            </li>
+        </ul>
+        </p>
+        可取消的操作：
+        <ul>
+            <li>
+                <b>ol/source/Vector</b>
+                <i>addFeature</i> / <i>removeFeature</i> / <i>clear</i>
+                <br />
+                核心 <i>clear</i> 功能已被覆蓋以觸發
+                <i>clearstart</i> 和 <i>clearend</i> 事件
+            </li>
+        </ul>
+        <br />
+        可取消的互動：
+        <ul>
+            <li>
+                <b>ol/interaction/Draw</b> (ol core interaction)
+            </li>
+            <li>
+                <a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.modifyfeature.html">
+                    <b>ol/interaction/ModifyFeature</b>
+                </a>
+                核心 <i>ol/interaction/Modify</i> 已被重寫以處理修改開始/結束事件
+                (看 <a
+                    href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.modifyfeature.html">這個例子</a>)
+            </li>
+            <li>
+                <b>ol/interaction/Delete</b>
+            </li>
+            <li>
+                <a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.drawhole.html">
+                    <b>ol/interaction/DrawHole</b>
+                </a>
+            </li>
+            <li>
+                <a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.transform.html">
+                    <b>ol/interaction/Transform</b>
+                </a>
+            </li>
+            <li>
+                <a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.split.html">
+                    <b>ol/interaction/Split</b>
+                </a>
+            </li>
+            <li>
+                <a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.offset.html">
+                    <b>ol/interaction/Offset</b>
+                </a>
+            </li>
+            <li>
+                <b>ol/interaction/FillAttribute</b> (看 <a
+                    href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.undoredo2.html">這個例子</a>)
+            </li>
+        </ul>
+        <p>
+            要添加您自己的可取消操作，請查看
+            <a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.undocustom.html">這個例子</a>.
+        </p>
+    </div>
+
+    <!-- Map div -->
+    <div id="map" style="width:100%; height:400px;"></div>
+
+    <div class="options">
+        <h2>Undo stack</h2>
+        <button onclick="undoInteraction.clear()">清除堆棧...</button>
+        <hr />
+        <ul class="undo"></ul>
+        <hr />
+        <ul class="redo"></ul>
+    </div>
+    <script type="text/javascript">
+        // 在客戶端呈現的矢量數據。
+        var vector = new ol.layer.Vector({
+            // 來源: 為矢量圖層(geojson)提供特徵源。
+            source: new ol.source.Vector(),
+            // 風格
+            style: function (f) {
+                // 設定風格
+                return new ol.style.Style({
+                    // 圖像風格。: 為矢量特徵設置圓形樣式。
+                    image: new ol.style.Circle({
+                        // 圓半徑。
+                        radius: 5,
+                        // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+                        stroke: new ol.style.Stroke({
+                            // 邊線寬度
+                            width: 1.5,
+                            // get(key) 獲取一個值。
+                            color: f.get('color') || [255, 128, 0]
+                        }),
+                        // 填充樣式: 設置矢量(geojson)特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // get(key) 獲取一個值。
+                            // concat 用來合併兩個或多個陣列。
+                            color: (f.get('color') || [255, 128, 0]).concat([.3])
+                        })
+                    }),
+                    // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+                    stroke: new ol.style.Stroke({
+                        // 邊線寬度
+                        width: 2.5,
+                        // get(key) 獲取一個值。
+                        color: f.get('color') || [255, 128, 0]
+                    }),
+                    // 填充樣式: 設置矢量(geojson)特徵的填充樣式。
+                    fill: new ol.style.Fill({
+                        // get(key) 獲取一個值。
+                        // concat 用來合併兩個或多個陣列。
+                        color: (f.get('color') || [255, 128, 0]).concat([.3])
+                    })
+                })
+            }
+        })
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 視圖縮放等級
+                zoom: 14,
+                // 地圖中心地點:[經度,緯度]
+                center: [270701, 6247637]
+            }),
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM()
+                }),
+                vector
+            ]
+        });
+
+        // OL3 的控制欄 控制欄是其他控件的容器。它可用於創建工具欄。控制欄可以嵌套並與 ol.control.Toggle 結合來處理激活/停用。
+        var mainbar = new ol.control.Bar();
+        // 將給定的控件添加到地圖。
+        map.addControl(mainbar);
+
+        // 用於在圖層中進行編輯的控制欄
+        var editbar = new ol.control.EditBar({
+            // 來源: 獲取圖層源。
+            source: vector.getSource(),
+            // 要添加到欄的交互列表，即。Select、Delete、Info、DrawPoint、DrawLine、DrawPolygon 每個交互都可以是一個交互或 true（獲取默認值）或 false 以將其從欄中刪除
+            interactions: {
+                Info: false
+            }
+        });
+        // 將給定的控件添加到地圖。
+        mainbar.addControl(editbar);
+
+        // 添加填充交互以設置顏色屬性
+        // ol.interaction.FillAttribute  A選擇交互以在單擊時填充特徵的屬性。
+        var fill = new ol.interaction.FillAttribute({
+            name: 'fill color'
+        }, {
+            color: [255, 0, 0] // 紅色
+        });
+
+        // addControl 將給定的控件添加到地圖。
+        // ol.control.Toggle 一個簡單的切換控件，可以通過交互來創建控件以控制其激活。
+        editbar.addControl(new ol.control.Toggle({
+            // 要插入控件的html
+            html: '<i class="fa fa-paint-brush"></i>',
+            // 控件的標題
+            title: '填充顏色屬性',
+            // 與控件相關的交互
+            interaction: fill,
+            // 與控件關聯的子欄（如果控件嵌套在 ol.control.Bar 中，則在活動時繪製）
+            // ol.control.Bar   OL3的控制欄 控制欄是其他控件的容器。它可用於創建工具欄。控制欄可以嵌套並與 ol.control.Toggle 結合來處理激活/停用。
+            bar: new ol.control.Bar({
+                // 要添加到欄的控件列表
+                controls: [
+                    // 一個簡單的按鈕控制
+                    new ol.control.Button({
+                        // 控件名稱
+                        className: 'red',
+                        // 單擊控件時的回調（或使用 change:active 事件）
+                        handleClick: function () {
+                            // setAttribute(key, val) 設置一個屬性
+                            fill.setAttribute('color', [255, 0, 0]) // 紅色
+                        }
+                    }),
+                    // 一個簡單的按鈕控制
+                    new ol.control.Button({
+                        // 控件名稱
+                        className: 'green',
+                        // 單擊控件時的回調（或使用 change:active 事件）
+                        handleClick: function () {
+                            // setAttribute(key, val) 設置一個屬性
+                            fill.setAttribute('color', [0, 255, 0]) // 綠色
+                        }
+                    }),
+                    // 一個簡單的按鈕控制
+                    new ol.control.Button({
+                        // 控件名稱
+                        className: 'blue',
+                        // 單擊控件時的回調（或使用 change:active 事件）
+                        handleClick: function () {
+                            // setAttribute(key, val) 設置一個屬性
+                            fill.setAttribute('color', [0, 0, 255]) // 藍色
+                        }
+                    })
+                ]
+            })
+        }));
+
+        // 復原/取消復原交互
+        var undoInteraction = new ol.interaction.UndoRedo();
+        // 將給定的交互添加到地圖。
+        map.addInteraction(undoInteraction);
+        // 防止選擇已刪除的要素
+        // undo 復原
+        undoInteraction.on('undo', function (e) {
+            // addfeature 將功能添加到來源時觸發。
+            if (e.action.type === 'addfeature') {
+                // getInteraction(name) 獲取與欄關聯的交互
+                // getFeatures 以隨機順序獲取源上當前功能的快照。
+                // clear 清除
+                editbar.getInteraction('Select').getFeatures().clear();
+                // getInteraction(name) 獲取與欄關聯的交互
+                // select 選定的特徵數組。
+                editbar.getInteraction('Transform').select();
+            }
+        });
+
+        // 處理復原/取消復原堆棧
+        // stack:add  堆棧：添加
+        undoInteraction.on('stack:add', function (e) {
+            // 新動作元素
+            if (!e.action.element) {
+                // object.text() 或 var object = new text('string')
+                // 此方法類似於 JavaScript中的 innerText屬性，可以用來讀取或者設置某個元素中的文字內容。
+                var elt = e.action.element = $('<li>').text(e.action.name || e.action.type)
+                // 將指定的類添加到匹配元素集中的每個元素。
+                elt.addClass(e.action.name || e.action.type);
+                // 滑鼠點擊
+                elt.click(function () {
+                    // 復原或取消復原堆棧
+                    // parent 獲得當前匹配元素集合中每個元素的父元素，使用選擇器進行篩選是可選的。
+                    // hasClass(ClassName) 檢查是否有任何選定的元素具有指定的類名。
+                    if (elt.parent().hasClass('undo')) {
+                        // 復原(上一步)
+                        undoInteraction.undo();
+                    }
+                    else {
+                        // 取消復原(下一步)
+                        undoInteraction.redo();
+                    }
+                })
+            }
+            // 附加到復原堆棧
+            // append 在最後一個子項之後插入一組對像Node或DOMString對象Element。DOMString對像作為等效Text節點插入。
+            // element 元素。例: <a></a>
+            $('.options .undo').append(e.action.element);
+            // attr(屬性名稱, 值) 設置或返回被選元素的屬性值。
+            e.action.element.attr('title', 'undo');
+            // hasRedo 檢查取消復原是否可用
+            if (!undoInteraction.hasRedo()) $('.options .redo').html('');
+            console.log(undoInteraction.length() + ' undo 復原 | ' + undoInteraction.length('redo') + ' redo 取消復原')
+        });
+
+        // 附加到取消復原堆棧
+        // stack:remove 堆棧：刪除
+        undoInteraction.on('stack:remove', function (e) {
+            // 允許您從復原堆棧中刪除操作。
+            if (e.shift) {
+                // first 將匹配元素集合縮減為集合中的第一個元素(註:例如多個 li 只會改變第一位)。
+                // remove 刪除
+                $('.options .undo li').first().remove();
+            }
+            else {
+                // prepend 將參數指定的內容插入到匹配元素集中每個元素的開頭。
+                // last 將匹配元素的集合減少到集合中的最後一個。
+                $('.options .redo').prepend($('.options .undo li').last());
+            }
+            e.action.element.attr('title', 'redo');
+            console.log(undoInteraction.length() + ' undo 復原 | ' + undoInteraction.length('redo') + ' redo 取消復原')
+        });
+        // 清除堆棧
+        undoInteraction.on('stack:clear', function (e) {
+            // 清空
+            $('.options .undo').html('');
+            $('.options .redo').html('');
+            console.log(undoInteraction.length() + ' undo 復原 | ' + undoInteraction.length('redo') + ' redo 取消復原')
+        });
+
+        // 將按鈕添加到欄
+        // ol.control.Bar  OL3的控制欄 控制欄是其他控件的容器。它可用於創建工具欄。控制欄可以嵌套並與 ol.control.Toggle 結合來處理激活/停用。
+        var bar = new ol.control.Bar({
+            // 是一個組，默認為false
+            group: true,
+            // 要添加到欄的控件列表
+            controls: [
+                new ol.control.Button({
+                    // 要插入控件的html
+                    html: '<i class="fa fa-undo" ></i>',
+                    // 控件的標題
+                    title: '復原',
+                    // 單擊控件時的回調（或使用 change:active 事件）
+                    handleClick: function () {
+                        undoInteraction.undo();
+                    }
+                }),
+                new ol.control.Button({
+                    // 要插入控件的html
+                    html: '<i class="fa fa-repeat" ></i>',
+                    // 控件的標題
+                    title: '取消復原',
+                    // 單擊控件時的回調（或使用 change:active 事件）
+                    handleClick: function () {
+                        undoInteraction.redo();
+                    }
+                })
+            ]
+        });
+        // 將給定的控件添加到地圖。
+        mainbar.addControl(bar);
+
+        // 添加快照
+        // addInteraction 將給定的交互添加到地圖。
+        // ol.interaction.Snap 用於分割特徵幾何的交互分割交互
+        map.addInteraction(new ol.interaction.Snap({
+            // 來源: 獲取圖層源。
+            source: vector.getSource()
+        }));
+    </script>
+    <br><a href="https://viglino.github.io/ol-ext/examples/interaction/map.interaction.undoredo.html">官方範例</a>
+</body>
+
+</html>

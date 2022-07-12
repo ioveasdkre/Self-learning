@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>階梯瀑布圖</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 1200px;height:800px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        // 數據
+        var data = [900, 345, 393, -108, -154, 135, 178, 286, -119, -361, -203];
+        // 儲存第一個柱狀圖(兩個柱狀圖堆疊，儲存下面的柱狀圖)
+        var help = [];
+        // 儲存正數
+        var positive = [];
+        // 儲存負數
+        var negative = [];
+        // 計算每月總額
+        for (var i = 0, sum = 0; i < data.length; ++i) {
+            // 判斷 data是否大於等於 0
+            if (data[i] >= 0) {
+                // push(要新增的參數或物件) 新增至陣列尾端
+                // 正數
+                positive.push(data[i]);
+                negative.push('-');
+            }
+            else {
+                positive.push('-');
+                // 負數
+                negative.push(-data[i]);
+            }
+
+            // 儲存柱狀圖的底部位置
+            // 判斷 i等於 0
+            if (i === 0) {
+                help.push(0);
+            }
+            else {
+                sum += data[i - 1];
+                // 判斷 data是否小於 0
+                if (data[i] < 0) {
+                    // sum加上 data計算總額
+                    help.push(sum + data[i]);
+                } else {
+                    // 正數
+                    help.push(sum);
+                }
+            }
+        }
+
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // 標頭
+            title: {
+                text: 'Waterfall'
+            },
+            // 我们通过配置grid组件，来调整图表在div容器里的位置，以及图表的背景样式
+            grid: {
+                // 左
+                left: '3%',
+                // 右
+                right: '4%',
+                // 底部
+                bottom: '3%',
+                // false 决定的是由坐标轴形成的矩形的尺寸和位置。
+                // true 决定的是包括了坐标轴标签在内的所有内容所形成的矩形的位置。
+                containLabel: true
+            },
+            // X軸
+            xAxis: {
+                // 主座標
+                type: 'category',
+                // splitLine坐标轴在 grid 区域中的分隔线。
+                splitLine: {
+                    // true是否显示分隔线。默认数值轴显示，类目轴不显示。
+                    // x軸向上的線是否顯示
+                    show: false
+                },
+                // 數據
+                data: (function () {
+                    // 儲存籃子
+                    var list = [];
+                    for (var i = 1; i <= 11; i++) {
+                        // push(要新增的參數或物件) 新增至陣列尾端
+                        list.push('Oct/' + i);
+                    }
+                    return list;
+                })()
+            },
+            // Y軸
+            yAxis: {
+                // 數值軸，適用於連續數據。
+                type: 'value'
+            },
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 柱狀圖
+                    type: 'bar',
+                    // 數據堆疊
+                    stack: 'all',
+                    // 項目樣式
+                    itemStyle: {
+                        // 滑鼠移過
+                        normal: {
+                            // 柱狀圖邊框顏色
+                            barBorderColor: 'rgba(0,0,0,0)',
+                            // 背景顏色
+                            color: 'rgba(0,0,0,0)'
+                        },
+                        // 滑鼠停留
+                        emphasis: {
+                            // 柱狀圖邊框顏色
+                            barBorderColor: 'rgba(0,0,0,0)',
+                            // 背景顏色
+                            color: 'rgba(0,0,0,0)'
+                        }
+                    },
+                    // 第一個柱狀圖(兩個柱狀圖堆疊，儲存下面的柱狀圖)
+                    data: help
+                },
+                {
+                    name: 'positive',
+                    // 柱狀圖
+                    type: 'bar',
+                    // 數據堆疊
+                    stack: 'all',
+                    // 正數
+                    data: positive
+                },
+                {
+                    name: 'negative',
+                    // 柱狀圖
+                    type: 'bar',
+                    // 數據堆疊
+                    stack: 'all',
+                    // 負數
+                    data: negative,
+                    // 項目樣式
+                    itemStyle: {
+                        // 背景顏色
+                        color: '#f33'
+                    }
+                }
+            ]
+        };
+        //#endregion
+
+        // 使用剛指定的配置項和數據顯示圖表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/bar/waterfall">官網範例連結</a>
+</body>
+
+</html>

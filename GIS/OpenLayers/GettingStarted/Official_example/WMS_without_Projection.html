@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>無投影(座標系統)的 WMS</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>無投影(座標系統)的 WMS</h1>
+    <div id="map" class="map"></div>
+    <h4>只要不需要坐標變換，OpenLayers 就可以很好地處理只配置了 acode和 的投影units。</h4>
+    <script>
+        // 這裡是宣告圖層陣列
+        const layers = [
+            // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+            new ol.layer.Tile({
+                // 來源: WMS 服務器的來源，提供單一的、untiled 的圖像。
+                source: new ol.source.TileWMS({
+                    // 版權聲明
+                    attributions:
+                        '© <a href="https://shop.swisstopo.admin.ch/en/products/maps/national/lk1000"' +
+                        'target="_blank">Pixelmap 1:1000000 / geo.admin.ch</a>',
+                    // crossOrigin加載圖像的屬性。請注意，crossOrigin如果要使用 Canvas 渲染器訪問像素數據，則必須提供一個值。有關更多詳細信息，請參閱https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image。
+                    crossOrigin: 'anonymous',
+                    // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。WIDTH、HEIGHT、BBOX 和CRS（SRS對於 WMS 版本 < 1.3.0）將動態設置。
+                    params: {
+                        'LAYERS': 'ch.swisstopo.pixelkarte-farbe-pk1000.noscale',
+                        'FORMAT': 'image/jpeg',
+                    },
+                    // WMS 服務 URL。
+                    url: 'https://wms.geo.admin.ch/',
+                }),
+            }),
+            // 可用於任意範圍和分辨率的服務器渲染圖像。
+            new ol.layer.Image({
+                // 來源:WMS 服務器的來源，提供單一的、untiled 的圖像。
+                source: new ol.source.ImageWMS({
+                    // 版權聲明
+                    attributions:
+                        '© <a href="https://www.hydrodaten.admin.ch/en/notes-on-the-flood-alert-maps.html"' +
+                        'target="_blank">Flood Alert / geo.admin.ch</a>',
+                    // crossOrigin加載圖像的屬性。請注意，crossOrigin如果要使用 Canvas 渲染器訪問像素數據，則必須提供一個值。有關更多詳細信息，請參閱https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image。
+                    crossOrigin: 'anonymous',
+                    // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。WIDTH、HEIGHT、BBOX 和CRS（SRS對於 WMS 版本 < 1.3.0）將動態設置。
+                    params: { 'LAYERS': 'ch.bafu.hydroweb-warnkarte_national' },
+                    // 遠程 WMS 服務器的類型：mapserver,geoserver或qgis。僅當hidpiis時才需要true。
+                    serverType: 'mapserver',
+                    // WMS 服務 URL。
+                    url: 'https://wms.geo.admin.ch/',
+                }),
+            }),
+        ];
+
+        // 一個最小的投影對像只配置了 SRS 代碼和地圖單元。 對於這樣的投影對象，不可能進行客戶端坐標變換。 請求瓦片只需要代碼和笛卡爾坐標的瓦片網格； 這些坐標與緯度或經度的關係無關緊要。
+        // 在沒有可用變換的情況下，必須假設投影單位代表真實距離。 在局部投影的情況下，對於有意義的（如果不是 100% 準確的）ScaleLine 控制，這可能是一個足夠接近的近似值。
+
+        // 投影(座標系統)定義類。
+        const projection = new ol.proj.Projection({
+            // SRS 標識符代碼(座標系統)，例如EPSG:4326。
+            code: 'EPSG:21781',
+            // 單位。除非為 定義了 proj4 投影，否則是必需的code。
+            units: 'm',
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 最初添加到地圖的控件。: ol.control.defaults() 默認情況下包含在地圖中的一組控件。除非另有配置，否則這將返回一個包含以下每個控件的實例的集合：
+            // extend 修改一個範圍以包括另一個範圍。
+            // ol.control.ScaleLine 顯示粗略 y 軸距離的控件，為視口的中心計算。
+            controls: ol.control.defaults().extend([new ol.control.ScaleLine()]),
+            // 這裡是宣告圖層陣列
+            layers: layers,
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [660000, 190000],
+                // 投影(座標系統)。默認為球形墨卡托(EPSG:3857)。
+                projection: projection,
+                // 視圖縮放等級
+                zoom: 9,
+            }),
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wms-no-proj.html">官方範例</a>
+</body>
+
+</html>

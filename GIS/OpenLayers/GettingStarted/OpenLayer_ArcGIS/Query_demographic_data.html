@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查詢人口統計數據</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 身份驗證助手 -->
+    <script src="Js/auth.umd.min.js"></script>
+    <!-- ArcGIS 人口統計數據助手 -->
+    <script src="Js/demographics.umd.min.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+    #map canvas {
+        cursor: crosshair;
+    }
+</style>
+<body>
+    <h1>查詢人口統計數據</h1>
+    <h4>了解如何使用GeoEnrichment 服務.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>這GeoEnrichment 服務提供有關您定義的地理區域的人口和家庭規模等信息。該enrich方法提供了獲取有關位置或區域的事實的能力。</h4>
+    <h4>使用 Enrich，您可以獲取有關特定區域或某個點的特定距離內的人員、地點和企業的信息。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([18.88, 47.33]),
+                // 視圖縮放等級
+                zoom: 5
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Streets";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, basemapURL).then(function (map) {
+            // 無需拖動即可單擊。雙擊將觸發其中兩個。
+            map.on("click", (event) => {
+                // 產生一個彈跳視窗
+                const popup = new Popup();
+                // 將給定的疊加層添加到地圖中。
+                map.addOverlay(popup);
+
+                // ol.proj.toLonLat(坐標, opt_projection) 將坐標轉換為經度/緯度。
+                const lonLat = ol.proj.toLonLat(event.coordinate);
+
+                // 用於使用 API密鑰進行身份驗證。
+                const authentication = new arcgisRest.ApiKey({
+                    // key: value
+                    key: apiKey
+                });
+
+                // 用於獲取有關位置或區域的事實。
+                arcgisRest.queryDemographicData({
+                    // 定義地圖上正在分析的區域
+                    studyAreas: [{ geometry: { x: lonLat[0], y: lonLat[1] } }],
+                    // API密鑰驗證
+                    authentication: authentication
+                })
+                // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+                .then((response) => {
+                    // 抓取 data標籤
+                    const data = document.getElementById("data");
+                    // 特徵設定
+                    const featureSet = response.results[0].value.FeatureSet;
+
+                    // 訊息
+                    let message;
+                    // 判斷 特徵集合長度大於 0及 特徵長度 大於 0
+                    if (featureSet.length > 0 && featureSet[0].features.length > 0) {
+                        // 特徵集合
+                        const attributes = featureSet[0].features[0].attributes;
+                        // 彈跳視窗內容
+                        message =
+                        `<b>1 英里搜索半徑的數據</b>` +
+                        [
+                            `<br>人口: ${attributes.TOTPOP}`,
+                            `男性: ${attributes.TOTMALES} `,
+                            `女性: ${attributes.TOTFEMALES}`,
+                            `平均家庭規模: ${attributes.AVGHHSZ}`
+                        ].join("<br>");
+                    } else {
+                        message = "此位置的數據不可用。";
+                    }
+                    // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                    popup.show(event.coordinate, message);
+                });
+            });
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/demographic-data/query-demographic-data/">官方範例</a>
+</body>
+</html>

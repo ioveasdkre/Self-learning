@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>標記(畫線段)動畫</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>標記(畫線段)動畫</h1>
+    <div id="map" class="map"></div>
+    <label for="speed">
+        速度:&nbsp;
+        <input id="speed" type="range" min="10" max="999" step="10" value="60">
+    </label>
+    <button id="start-animation">開始動畫</button>
+    <h4>此示例展示瞭如何使用渲染後事件和矢量上下文來為沿線的標記要素設置動畫。在此示例中，使用了編碼折線。</h4>
+    <h4>如果使用 VS Code請開啟 Open With Live Server查看此範例</h4>
+    <script>
+        const key = 'Get your own API key at https://www.maptiler.com/cloud/';
+        // 版權聲明
+        const attributions =
+            '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
+            '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>';
+
+        // 座標
+        const center = [-5639523.95, -3501274.52];
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標
+                center: center,
+                // 視圖縮放等級
+                zoom: 10,
+                // 最小縮放
+                minZoom: 2,
+                // 最大縮放
+                maxZoom: 19,
+            }),
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                    // source: new ol.source.XYZ({
+                    //     attributions: attributions,
+                    //     url: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=' + key,
+                    //     tileSize: 512,
+                    // }),
+                }),
+            ],
+        });
+
+        // 折線字符串是從類似於 Openrouteservice和 Mapbox等路線 API返回的 JSON中讀取的。
+        // fetch 讀取 API檔案，提供了一種 JavaScript Interface 來操作 HTTP pipeline，比方 request 和 response。
+        // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/API/Fetch_API/Using_Fetch
+        // then 非同步行為完成後的動作。
+        // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+        fetch('Json/Start_Animation.json').then(function (response) {
+            // 將 JSON作為輸入並解析它以生成 JavaScript對象的結果。
+            response.json().then(function (result) {
+                // 折線
+                const polyline = result.routes[0].geometry;
+
+                // 用於以編碼折線算法格式讀取和寫入數據的特徵格式。
+                const route = new ol.format.Polyline({
+                    // 坐標值將被縮放的因子。
+                    factor: 1e6,
+                })
+                    // 從來源中讀取幾何。
+                    .readGeometry(polyline, {
+                        // 我們正在閱讀的數據的投影。
+                        dataProjection: 'EPSG:4326',
+                        // 格式讀取器創建的要素幾何的投影。
+                        featureProjection: 'EPSG:3857',
+                    });
+
+                // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+                const routeFeature = new ol.Feature({
+                    // 類型:路線
+                    type: 'route',
+                    // 幾何。
+                    geometry: route,
+                });
+                // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+                const startMarker = new ol.Feature({
+                    // 類型:圖標
+                    type: 'icon',
+                    // 幾何:ol.geom.Point(座標, 布局(註:可選)) 點幾何。
+                    // getFirstCoordinate 返回幾何的第一個坐標。
+                    geometry: new ol.geom.Point(route.getFirstCoordinate()),
+                });
+                // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+                const endMarker = new ol.Feature({
+                    // 類型:圖標
+                    type: 'icon',
+                    // 幾何:ol.geom.Point(座標, 布局(註:可選)) 點幾何。
+                    // getLastCoordinate 返回幾何體的最後一個坐標。
+                    geometry: new ol.geom.Point(route.getLastCoordinate()),
+                });
+                // getGeometry 返回將使用此樣式呈現的幾何圖形的特徵屬性或幾何圖形或函數。
+                // clone 製作幾何圖形的完整副本。
+                const position = startMarker.getGeometry().clone();
+                // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+                const geoMarker = new ol.Feature({
+                    // 類型:地理標誌
+                    type: 'geoMarker',
+                    // 幾何
+                    geometry: position,
+                });
+
+                const styles = {
+                    // 路線:設置風格
+                    'route': new ol.style.Style({
+                        // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+                        stroke: new ol.style.Stroke({
+                            // 邊線寬度
+                            width: 6,
+                            // 區域邊框顏色
+                            color: [237, 212, 0, 0.8], // 黃色
+                        }),
+                    }),
+                    // 圖標:設置風格
+                    'icon': new ol.style.Style({
+                        // 圖像風格。
+                        image: new ol.style.Icon({
+                            // 錨。默認值為圖標中心。
+                            anchor: [0.5, 1],
+                            // 圖像源 URI。
+                            src: 'https://a.tiles.mapbox.com/v3/aj.1x1-degrees.json?secure=1',
+                        }),
+                    }),
+                    // 地理標誌:設置風格
+                    'geoMarker': new ol.style.Style({
+                        // 圖像風格。:為矢量特徵設置圓形樣式。
+                        image: new ol.style.Circle({
+                            // 半徑。
+                            radius: 7,
+                            // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+                            fill: new ol.style.Fill({
+                                // 填滿
+                                color: 'black' // 黑色
+                            }),
+                            stroke: new ol.style.Stroke({
+                                // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+                                color: 'white', // 白色
+                                // 區域邊框顏色
+                                width: 2,
+                            }),
+                        }),
+                    }),
+                };
+
+                // 在客戶端呈現的矢量數據。
+                const vectorLayer = new ol.layer.Vector({
+                    // 來源:為矢量圖層提供特徵源。
+                    source: new ol.source.Vector({
+                        // 特徵。
+                        features: [routeFeature, geoMarker, startMarker, endMarker],
+                    }),
+                    // 設定風格
+                    style: function (feature) {
+                        // get(key)獲取一個值。
+                        return styles[feature.get('type')];
+                    },
+                });
+
+                // 將給定的圖層添加到此地圖的頂部。
+                map.addLayer(vectorLayer);
+
+                // 速度
+                const speedInput = document.getElementById('speed');
+                // 開始動畫
+                const startButton = document.getElementById('start-animation');
+                // 動畫
+                let animating = false;
+                // 距離
+                let distance = 0;
+                // 前一次時間
+                let lastTime;
+
+                // 移除特徵
+                function moveFeature(event) {
+                    // 轉換成數字型態
+                    const speed = Number(speedInput.value);
+                    // 時間
+                    const time = event.frameState.time;
+                    // 經過時間
+                    const elapsedTime = time - lastTime;
+                    // (距離 + (速度 * 經過時間) / 1e6) % 2
+                    // 1e6 10的6次方
+                    distance = (distance + (speed * elapsedTime) / 1e6) % 2;
+                    lastTime = time;
+
+                    // 返回幾何體的最後一個坐標。
+                    const currentCoordinate = route.getCoordinateAt(
+                        distance > 1 ? 2 - distance : distance
+                    );
+                    // 設置線串的坐標。
+                    position.setCoordinates(currentCoordinate);
+                    // 獲取用於繪製到事件畫布的矢量上下文。
+                    const vectorContext = ol.render.getVectorContext(event);
+                    // 設置要素的樣式以覆蓋圖層樣式。
+                    // geoMarker 地理標誌
+                    vectorContext.setStyle(styles.geoMarker);
+                    // 將幾何圖形渲染到畫布中。renderer.setStyle()首先調用 設置渲染樣式。
+                    vectorContext.drawGeometry(position);
+                    // 告訴 OpenLayers 繼續渲染後動畫
+                    // render 請求地圖渲染（在下一個動畫幀）。
+                    map.render();
+                }
+
+                // 開始動畫
+                function startAnimation() {
+                    // 動畫
+                    animating = true;
+                    // 前一次時間 = 現在時間
+                    lastTime = Date.now();
+                    // 屬性表示了節點或其後代的文字內容。
+                    startButton.textContent = '停止動畫';
+                    // 渲染以及移除前一次特徵
+                    vectorLayer.on('postrender', moveFeature);
+                    // 通過更改事件隱藏geoMarker並觸發地圖渲染
+                    geoMarker.setGeometry(null);
+                }
+
+                // 停止動畫
+                function stopAnimation() {
+                    // 動畫
+                    animating = false;
+                    // 屬性表示了節點或其後代的文字內容。
+                    startButton.textContent = '開始動畫';
+                    // 將標記保持在當前動畫位置
+                    geoMarker.setGeometry(position);
+                    // 渲染以及移除前一次特徵
+                    vectorLayer.un('postrender', moveFeature);
+                }
+
+                // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+                startButton.addEventListener('click', function () {
+                    if (animating) {
+                        // 停止動畫
+                        stopAnimation();
+                    }
+                    else {
+                        // 開始動畫
+                        startAnimation();
+                    }
+                });
+            });
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/feature-move-animation.html">官方範例</a>
+</body>
+
+</html>

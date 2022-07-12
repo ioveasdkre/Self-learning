@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖標像素操作</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>圖標像素操作</h1>
+    <div id="map" class="map"></div>
+    <h4>使用圖標來符號化點的示例。單擊圖標以選擇它，它將使用其負圖像進行渲染。</h4>
+    <script>
+        // 創建樣式
+        function createStyle(src, img) {
+            // 回傳風格
+            return new ol.style.Style({
+                // 圖像風格。
+                image: new ol.style.Icon({
+                    // 錨。默認值為圖標中心。
+                    anchor: [0.5, 0.96],
+                    // crossOrigin加載圖像的屬性。
+                    crossOrigin: 'anonymous',
+                    // 圖像源 URI。
+                    src: src,
+                    // 圖標的圖像對象。
+                    img: img,
+                    // 圖像大小（以像素為單位）。
+                    imgSize: img ? [img.width, img.height] : undefined
+                })
+            });
+        }
+
+        // ol.Feature 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        // ol.geom.Point 點幾何。
+        const iconFeature = new ol.Feature(new ol.geom.Point([0, 0]));
+        // set(key, value, opt_silent(註:更新而不觸發事件。選擇性參數)) 設置一個值。
+        iconFeature.set('style', createStyle('https://openlayers.org/en/v4.6.5/examples/data/icon.png', undefined));
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源: Stamen 切片服務器的圖層源。
+                    source: new ol.source.Stamen({
+                        // 圖層名稱。
+                        layer: 'watercolor'
+                    })
+                }),
+                // 在客戶端呈現的矢量數據。
+                new ol.layer.Vector({
+                    // 設定風格
+                    style: function (feature) {
+                        // get(key)獲取一個值。
+                        return feature.get('style');
+                    },
+                    // 為矢量圖層提供特徵源。
+                    source: new ol.source.Vector({
+                        // 特徵。
+                        features: [iconFeature]
+                    })
+                })
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 3,
+            })
+        });
+
+        // 設定選擇樣式的籃子
+        const selectStyle = {};
+        // 用於選擇矢量特徵的交互。
+        const select = new ol.interaction.Select({
+            // 所選要素的樣式。
+            style: function (feature) {
+                // get(key)獲取一個值。
+                // getImage 獲取圖像樣式。
+                const image = feature.get('style').getImage().getImage();
+                // 判斷沒有 image.src 就成立
+                if (!selectStyle[image.src]) {
+                    // 可以依指定的標籤名稱（tagName）建立 HTML 元素，或是在未定義標籤名稱下建立一個 HTMLUnknownElement (en-US)。
+                    const canvas = document.createElement('canvas');
+                    // 返回畫布上的繪圖上下文，或者null如果上下文標識符不受支持，或者畫布已設置為不同的上下文模式。
+                    const context = canvas.getContext('2d');
+                    // 圖片寬度
+                    canvas.width = image.width;
+                    // 圖片高度
+                    canvas.height = image.height;
+                    // void ctx.drawImage(image(來源), dx, dy, dWidth, dHeight) 提供了多種方式在 Canvas 上繪製
+                    // 參考網址:https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/drawImage
+                    context.drawImage(image, 0, 0, image.width, image.height);
+                    // getImageData(sx, sy, sw, sh) 返回一個ImageData對象，該 對象表示畫布指定部分的底層像素數據。
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    for (let i = 0, ii = data.length; i < ii; i = i + (i % 4 == 2 ? 2 : 1)) {
+                        data[i] = 255 - data[i];
+                    }
+                    // putImageData(imageData, dx, dy) 將來自給定ImageData對象的數據繪製到畫布上。
+                    // 參考網址:https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/putImageData
+                    context.putImageData(imageData, 0, 0);
+                    // 創建樣式(自己寫的方法)
+                    selectStyle[image.src] = createStyle(undefined, canvas);
+                }
+                return selectStyle[image.src];
+            }
+        });
+
+        // 將給定的交互添加到地圖。
+        map.addInteraction(select);
+
+        // 在標記上時更改鼠標光標
+        map.on('pointermove', function (evt) {
+            // getTargetElement 獲取在其中呈現此地圖的 DOM 元素。與getTarget此方法相反， 此方法始終返回Element, 或者null如果地圖沒有目標。
+            // style.cursor 獲取來源
+            // hasFeatureAtPixel 檢測要素是否與視口上的像素相交。
+            // pointer 指針(鼠標)
+            map.getTargetElement().style.cursor = map.hasFeatureAtPixel(evt.pixel) ? 'pointer' : '';
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/modify-icon.html">官方範例</a>
+</body>
+
+</html>

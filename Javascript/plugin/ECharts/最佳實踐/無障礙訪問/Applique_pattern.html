@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>貼花圖案</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region 指定图表的配置项和数据
+    option = {
+      // X座標
+      xAxis: {
+        // 主座標
+        type: 'category',
+        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      },
+      // Y座標
+      yAxis: {
+        // 數值軸，適用於連續數據。
+        type: 'value'
+      },
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          // 數據
+          data: [120, 200, 150, 80, 70, 110, 130],
+          // 柱狀圖
+          type: 'bar'
+        },
+        {
+          // 數據
+          data: [20, 40, 90, 40, 30, 70, 120],
+          // 柱狀圖
+          type: 'bar'
+        },
+        {
+          // 數據
+          data: [140, 230, 120, 50, 30, 150, 120],
+          // 柱狀圖
+          type: 'bar'
+        }
+      ],
+      // W3C 制定了無障礙富互聯網應用規範集（WAI-ARIA，the Accessible Rich Internet Applications Suite），致力於使得網頁內容和網頁應用能夠被更多殘障人士訪問。 Apache ECharts 4 遵從這一規範，支持自動根據圖表配置項智能生成描述，使得盲人可以在朗讀設備的幫助下了解圖表內容，讓圖表可以被更多人群訪問。除此之外，Apache ECharts 5 新增支持貼花紋理，作為顏色的輔助表達，進一步用以區分數據。
+      aria: {
+        // 如果 aria.enabled 设置为 true，label 默认开启。开启后，会根据图表、数据、标题等情况，自动智能生成关于图表的描述，用户也可以通过配置项修改描述。
+        enabled: true,
+        // 为系列数据增加贴花纹理，作为颜色的辅助，帮助区分数据。使用默认贴花图案的方式非常简单，只需要开启即可：
+        decal: {
+          show: true
+        }
+      }
+    };
+    //#endregion
+
+    option && myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/best-practices/aria">官網範例連結</a>
+</body>
+
+</html>

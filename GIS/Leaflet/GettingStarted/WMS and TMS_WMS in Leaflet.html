@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS和 TMS(QGIS使用)-地圖中的 WMS</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <!-- 地圖中的 WMS -->
+    <script>
+        // map('id') 地圖
+        // setView([地理坐標], 縮放級別)
+        // 設計一個籃子儲存地圖中心座標
+        var map = L.map('map', {
+            // 中心點
+            center: [-17, -67],
+            // 縮放等級
+            zoom: 3
+        });
+
+        // tileLayer.wms('網址') 讀取顯示OGC標準的WMS地圖服務
+        var wmsLayer_color = L.tileLayer.wms('http://ows.mundialis.de/services/service?', {
+            layers: 'TOPO-OSM-WMS'
+        }).addTo(map);
+
+        var wmsLayer_White = L.tileLayer.wms('http://ows.mundialis.de/services/service?', {
+            layers: 'SRTM30-Colored-Hillshade'
+        }).addTo(map);
+
+        // 參 Layer Groups and Layers Control範例，新增功能
+        var baseMaps = {
+            // 灰色地圖(Key 命名自訂)
+            // 改變字體顏色
+            "<span style='color: red'>Grayscale</span>": wmsLayer_color,
+            // 彩色計圖(Key 命名自訂)
+            "Streets": wmsLayer_White
+        };
+
+        // control.layers(標記1, 標記2) 管理圖層(地圖右上角漢堡圖示可切換地圖)
+        L.control.layers(baseMaps).addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/wms/wms.html">官網範例連結</a>
+</body>
+</html>

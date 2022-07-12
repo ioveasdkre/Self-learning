@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>標籤的旋轉</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region 標籤選項
+    const labelOption = {
+      // 展示
+      show: true,
+      // 旋轉
+      rotate: 90,
+      // 標籤內容格式器，支持字符串模板和回調函數兩種形式，字符串模板與回調函數返回的字符串均支持用 \n 換行。
+      // {a}：系列名。
+      // {b}：数据名。
+      // {c}：数据值。
+      // {@xxx}：数据中名为 'xxx' 的维度的值，如 {@product} 表示名为 'product' 的维度的值。
+      // {@[n]}：数据中维度 n 的值，如 {@[3]} 表示维度 3 的值，从 0 开始计数。
+      formatter: '{c}  {name|{a}}',
+      // 字體大小
+      fontSize: 16,
+      // 在 rich 裡面，可以自定義富文本樣式。利用富文本樣式，可以在標籤中做出非常豐富的效果。
+      rich: {
+        // 對應 formatter的 name
+        name: {}
+      }
+    };
+    //#endregion
+
+    //#region 指定图表的配置项和数据
+    option = {
+      // X座標
+      xAxis: [
+        {
+          // 主座標
+          type: 'category',
+          // 數據
+          data: ['2012', '2013', '2014', '2015', '2016']
+        }
+      ],
+      // X座標
+      yAxis: [
+        {
+          // 數值軸，適用於連續數據。
+          type: 'value'
+        }
+      ],
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          name: 'Forest',
+          // 柱狀圖
+          type: 'bar',
+          // 距離
+          barGap: 0,
+          // 標籤:變數
+          label: labelOption,
+          // 滑鼠停留
+          emphasis: {
+            // 特效
+            // 'none' 不淡出其它图形，默认使用该配置。
+            // 'self' 只聚焦（不淡出）当前高亮的数据的图形。
+            // 'series' 聚焦当前高亮的数据所在的系列的所有图形。
+            focus: 'series'
+          },
+          data: [320, 332, 301, 334, 390]
+        },
+        {
+          name: 'Steppe',
+          // 柱狀圖
+          type: 'bar',
+          // 標籤:變數
+          label: labelOption,
+          // 滑鼠停留
+          emphasis: {
+            // 特效
+            // 'none' 不淡出其它图形，默认使用该配置。
+            // 'self' 只聚焦（不淡出）当前高亮的数据的图形。
+            // 'series' 聚焦当前高亮的数据所在的系列的所有图形。
+            focus: 'series'
+          },
+          // 數據
+          data: [220, 182, 191, 234, 290]
+        }
+      ]
+    };
+    //#endregion
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/label/rich-text">官網範例連結</a>
+</body>
+
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查找路線和方向</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 路由助手 -->
+    <script src="Js/routing.umd.min.js"></script>
+    <!-- ArcGIS 身份驗證助手 -->
+    <script src="Js/auth.umd.min.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+    #directions {
+        position: absolute;
+        width: 30%;
+        max-height: 50%;
+        right: 20px;
+        top: 20px;
+        overflow-y: auto; /* Show a scrollbar if needed */
+        background: white;
+        font-family: Arial, Helvetica, Verdana;
+        line-height: 1.5;
+        font-size: 14px;
+        padding: 10px;
+    }
+</style>
+<body>
+    <h1>查找路線和方向</h1>
+    <h4>了解如何使用路線服務.</h4>
+    <div id="map" class="map"></div>
+    <div id="directions">單擊地圖以創建路線的起點和終點。</div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>路由是從一個節點尋找路徑的過程起源到一個目的地在街道網絡中。您可以使用路線服務去尋找路線，獲取行車路線，計算行車時間，並解決複雜的多車輛路線問題。要創建路線，您通常會定義一組停靠點（起點和一個或多個目的地）並使用該服務來查找帶有方向的路線。您還可以使用許多附加參數（例如障礙和出行方式）來優化結果。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-79.3832, 43.6532]), // 多倫多
+                // 視圖縮放等級
+                zoom: 13
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Navigation";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 起始層, 結束層, 路由層
+        let startLayer, endLayer, routeLayer;
+
+        //#region addCircleLayers [ 添加圓形圖層 ]
+        /**
+         * 添加圓形圖層
+         * @returns {void}
+         */
+        function addCircleLayers() {
+            // 在客戶端呈現的矢量數據。
+            startLayer = new ol.layer.Vector({
+                // 設定風格: 矢量特徵渲染樣式的容器。
+                style: new ol.style.Style({
+                    // 圖像風格。: 圓形
+                    image: new ol.style.Circle({
+                        // 圓半徑
+                        radius: 6,
+                        // 填充樣式。: 設置矢量特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // 顏色: 白色
+                            color: "white"
+                        }),
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 顏色: 黑色
+                            color: "black",
+                            // 寬度
+                            width: 2
+                        })
+                    })
+                })
+            });
+
+            // 加入圖層
+            map.addLayer(startLayer);
+
+            // 在客戶端呈現的矢量數據。
+            endLayer = new ol.layer.Vector({
+                // 設定風格: 矢量特徵渲染樣式的容器。
+                style: new ol.style.Style({
+                    // 圖像風格。: 圓形
+                    image: new ol.style.Circle({
+                        // 圓半徑
+                        radius: 7,
+                        // 填充樣式。: 設置矢量特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // 顏色: 黑色
+                            color: "black"
+                        }),
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 顏色: 白色
+                            color: "white",
+                            // 寬度
+                            width: 2
+                        })
+                    })
+                })
+            });
+
+            // 加入圖層
+            map.addLayer(endLayer);
+        }
+        //#endregion
+
+        // 當前步驟 起始
+        let currentStep = "start";
+        // 起始座標, 結束座標
+        let startCoords, endCoords;
+
+        // 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+        const geojson = new ol.format.GeoJSON({
+            // 默認數據投影。
+            dataProjection: "EPSG:4326",
+            // 按格式讀取或寫入的特徵的投影。
+            featureProjection: "EPSG:3857"
+        });
+
+        // 無需拖動即可單擊。雙擊將觸發其中兩個。
+        map.on("click", (e) => {
+            // ol.proj.transform(座標, 來源, 目標) 將坐標從源投影轉換為目標投影。
+            const coordinates = ol.proj.transform(e.coordinate, "EPSG:3857", "EPSG:4326");
+            // 點位
+            const point = {
+                // 類型: 點位
+                type: "Point",
+                // 座標
+                coordinates
+            };
+
+            // 判斷是否為 起始點
+            if (currentStep === "start") {
+                // 設置圖層來源。
+                startLayer.setSource(
+                    // 為矢量圖層提供特徵源。
+                    new ol.source.Vector({
+                        // 特徵
+                        // readFeatures(來源，opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                        features: geojson.readFeatures(point)
+                    })
+                );
+
+                // 儲存 起始座標
+                startCoords = coordinates;
+
+                // 如果已經設置了 endCoords 和 route，則清除它們
+                if (endCoords) {
+                    // 清空 結束座標
+                    endCoords = null;
+                    // getSource() 讀取來源
+                    // clear(opt_fast) 從源中刪除所有功能。
+                    endLayer.getSource().clear(); // 結束層
+                    // getSource() 讀取來源
+                    // clear(opt_fast) 從源中刪除所有功能。
+                    routeLayer.getSource().clear(); // 路由層
+
+                    // 清空 說明視窗
+                    document.getElementById("directions").innerHTML = "";
+                    // 隱藏 說明視窗
+                    document.getElementById("directions").style.display = "none";
+                }
+
+                // 當前步驟 結束
+                currentStep = "end";
+                } else {
+                // 設置圖層來源。
+                endLayer.setSource(
+                    // 為矢量圖層提供特徵源。
+                    new ol.source.Vector({
+                        // 特徵
+                        // readFeatures(來源，opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                        features: geojson.readFeatures(point)
+                    })
+                );
+                // 儲存結束座標
+                endCoords = coordinates;
+                // 當前步驟 開始
+                currentStep = "start";
+
+                // 更新路由層(自訂方法)
+                updateRoute(startCoords, endCoords);
+            }
+        });
+
+        //#region addRouteLayer [ 添加路由層 ]
+        /**
+         * 添加路由層
+         * @returns {void}
+         */
+        function addRouteLayer() {
+            // 在客戶端呈現的矢量數據。
+            routeLayer = new ol.layer.Vector({
+                // 設定風格: 矢量特徵渲染樣式的容器。
+                style: new ol.style.Style({
+                    // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                    stroke: new ol.style.Stroke({
+                        // 顏色: 亮藍色
+                        color: "hsl(205, 100%, 50%)",
+                        // 寬度
+                        width: 4,
+                        // 透明度
+                        opacity: 0.6
+                    })
+                })
+            });
+
+            // 加入圖層
+            map.addLayer(routeLayer);
+        }
+        //#endregion
+
+        //#region updateRoute [ 更新路由 ]
+        /**
+         * 更新路由
+         * @returns {void}
+         */
+        function updateRoute() {
+            // 用於使用 API密鑰進行身份驗證。
+            const authentication = new arcgisRest.ApiKey({
+                // key: value
+                key: apiKey
+            });
+
+            // 用於尋找從一個地點到另一個地點或訪問多個地點的最佳方式。
+            arcgisRest.solveRoute({
+                // 指定要在其間找到路線的兩個或多個位置。: [座標1, 座標2,...]
+                stops: [startCoords, endCoords],
+                // API密鑰驗證
+                authentication
+            })
+            // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+            .then((response) => {
+                // 設置圖層來源。
+                routeLayer.setSource(
+                    // 為矢量圖層提供特徵源。
+                    new ol.source.Vector({
+                        // 特徵
+                        // readFeatures(來源，opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                        features: geojson.readFeatures(response.routes.geoJson)
+                    })
+                );
+
+                // 設定 html屬性
+                const directionsHTML = response.directions[0].features.map((f) => f.attributes.text).join("<br/>");
+                // 設置元素中包含的 HTML或 XML標記。
+                document.getElementById("directions").innerHTML = directionsHTML;
+                // 設定 style.display 為 block(註：區塊，元素會以區塊方式呈現)
+                document.getElementById("directions").style.display = "block";
+
+            })
+            // error處理
+            .catch((error) => {
+                // 提示視窗
+                alert("使用地理編碼器時出現問題。 有關詳細信息，請參閱控制台。");
+                console.error(error);
+            });
+        }
+        //#endregion
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, basemapURL).then(function (map) {
+            // 添加圓形圖層
+            addCircleLayers();
+            // 添加路由層
+            addRouteLayer();
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/route-and-directions/find-a-route-and-directions/">官方範例</a>
+</body>
+</html>

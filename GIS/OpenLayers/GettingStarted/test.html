@@ -1,0 +1,32 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Leaflet Quick Start Guide Example</title>
+	<meta charset="utf-8" />
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+</head>
+<body>
+	<div id="map" style="width: 600px; height: 400px"></div>
+
+	<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+	<script>
+
+		//設定圖面顯示位置與比例尺
+		var map = L.map('map').setView([24.1558311, 120.652411], 14);
+      
+		//載入外面osm主機底圖(OSM)
+		L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+			// 最大縮放
+			maxZoom: 18,
+			// 可以放入版權資訊的字串，格式為 html
+			attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> '
+		}).addTo(map);
+
+	</script>
+</body>
+</html>

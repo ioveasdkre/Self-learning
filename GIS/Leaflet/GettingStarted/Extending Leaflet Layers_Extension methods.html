@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴展地圖：層-擴展方法</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+
+    <!-- 連結 Extending Leaflet Layers_Extension methods.js檔 -->
+    <script src='js/Extending Leaflet Layers_Extension methods.js'></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <!-- 擴展方法 -->
+    <!-- 一些 Leaflet 類具有所謂的“擴展方法”：為子類編寫代碼的入口點。
+
+    其中之一是L.TileLayer.getTileUrl()。L.TileLayer每當新圖塊需要知道要加載哪個圖像時，就會在內部調用此方法。通過創建子類L.TileLayer並重寫其getTileUrl()功能，我們可以創建自定義行為。
+    
+    讓我們用一個自定義L.TileLayer來說明，它將顯示來自PlaceKitten 的隨機小貓圖像： -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 處裡圖像
+            crs: L.CRS.Simple,
+            // 中心點
+            center: [0, 0],
+            // 縮放等級
+            zoom: 5
+        });
+
+        // tileLayer用於在地圖上加載和顯示切片圖層
+        // L.tileLayer.自訂名稱
+        L.tileLayer.kitten = function() {
+            return new L.TileLayer.Kitten();
+        }
+
+        // addLayer 將給定的圖層添加到地圖
+        map.addLayer( L.tileLayer.kitten() );
+
+        // 通常，getTileUrl()接收圖塊坐標（如coords.x、coords.y和coords.z）並從中生成圖塊 URL。在我們的例子中，我們忽略了這些，每次都簡單地使用一個隨機數來獲得不同的小貓。
+    </script>
+    <a href="https://leafletjs.com/examples/extending/extending-2-layers.html">官網範例連結</a>
+</body>
+</html>

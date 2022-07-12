@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查找地點</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 地理編碼助手 -->
+    <script src="Js/geocoding.umd.min.js"></script>
+    <!-- ArcGIS 身份驗證助手 -->
+    <script src="Js/auth.umd.min.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>查找地點</h1>
+    <h4>了解如何使用地理編碼服務.</h4>
+    <div id="map" class="map"></div>
+    <select id="places-select" style="right: 20px; top: 20px; position: absolute; font-size: 16px; padding: 4px 8px">
+        <option value="">選擇地點類型...</option>
+        <option value="Coffee shop">咖啡店</option>
+        <option value="Gas station">加油站</option>
+        <option value="Food">美食廣場</option>
+        <option value="Hotel">酒店</option>
+        <option value="Parks and Outdoors">公園和戶外</option>
+    </select>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>地點尋找是尋找一個地點的過程地名或 POI 以查找其地址和地點. 您可以使用地理編碼服務查找全球任何地理位置的咖啡店、加油站或餐館等地點。您可以按名稱或使用類別搜索地點。您可以在某個位置附近進行搜索，也可以在全球範圍內進行搜索。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: view = new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-122.4194, 37.7749]),
+                // 視圖縮放等級
+                zoom: 14
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Navigation";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, basemapURL).then(function (map) {
+            // 在客戶端呈現的矢量數據。
+            const placesLayer = new ol.layer.Vector({
+                // 來源： 為矢量圖層提供特徵源。
+                source: new ol.source.Vector(),
+                // 設定風格
+                style: (feature) => new ol.style.Style({
+                    // 圖像風格。: 圓形
+                    image: new ol.style.Circle({
+                        // 圓半徑
+                        radius: 5,
+                        // 填充樣式。: 設置矢量特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // 顏色: 白色
+                            color: "white"
+                        }),
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 顏色: 深藍色
+                            // hsl(色相(註: 顏色), 飽和, 亮度) 
+                            color: "hsl(220, 80%, 40%)",
+                            // 寬度
+                            width: 2
+                        })
+                    }),
+                    // 文字樣式。: 設置矢量特徵的文本樣式。
+                    text: new ol.style.Text({
+                        // 字體樣式為 CSS 'font'值
+                        font: "14px sans-serif", // 14px 無襯線字體
+                        // 文本對齊。: 左
+                        textAlign: "left",
+                        // 文字內容。
+                        text: feature.get("PlaceName"),
+                        // 以像素為單位的水平文本偏移。
+                        offsetX: 8, // 將文本向右移動以避免重疊圓圈
+                        // 垂直文本偏移（以像素為單位）。
+                        offsetY: 2, // 向下移動以與圓心對齊
+                        // 填充樣式。: 設置矢量特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // 顏色: 深藍色
+                            // hsl(色相(註: 顏色), 飽和, 亮度) 
+                            color: "hsl(220, 80%, 40%)"
+                        }),
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 顏色: 白色
+                            color: "white"
+                        })
+                    })
+                }),
+                // 整理圖像和文本。
+                declutter: true
+            });
+
+            // 加入圖層
+            map.addLayer(placesLayer);
+
+            //#region showPlaces [ 表演場所 ]
+            /**
+             * 表演場所
+             * @returns {void}
+             */
+            function showPlaces() {
+                // 用於使用 API密鑰進行身份驗證。
+                const authentication = new arcgisRest.ApiKey({
+                    // key: value
+                    key: apiKey
+                });
+
+                // 儲存 下拉式選單的值
+                const category = document.getElementById("places-select").value;
+
+                // 用於確定單個地址或興趣點的位置。
+                arcgisRest.geocode({
+                    // API密鑰驗證
+                    authentication,
+                    // 要包含在響應中的屬性字段。
+                    outFields: "Place_addr,PlaceName", // 要返回的屬性
+                    // 參數
+                    params: {
+                        // 場所
+                        category,
+                        // 地點
+                        // ol.proj.toLonLat(坐標, opt_projection) 將坐標轉換為經度/緯度。
+                        // .getCenter() 獲取視圖中心。
+                        location: ol.proj.toLonLat(view.getCenter()),
+                        // 最大位置
+                        maxLocations: 25
+                    }
+                })
+                // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+                .then((response) => {
+                    // 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                    const features = new ol.format.GeoJSON({
+                        // 按格式讀取或寫入的特徵的投影。: 獲取視圖投影。
+                        featureProjection: view.getProjection()
+                    })
+                    // readFeatures(來源，opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                    .readFeatures(response.geoJson);
+                    // getSource() 讀取來源
+                    // clear(opt_fast) 從源中刪除所有功能。
+                    placesLayer.getSource().clear();
+                    // addFeatures(特徵) 將一批特徵添加到源中。
+                    placesLayer.getSource().addFeatures(features);
+                })
+                // error處理
+                .catch((error) => {
+                    // 提示視窗
+                    alert("使用地理編碼器時出現問題。 有關詳細信息，請參閱控制台。");
+                    console.error(error);
+                });
+            }
+            //#endregion
+
+            // 讀取下拉式選單，監控是否發生變化，真 執行方法，否 不動作
+            // addEventListener 將指定的監聽器註冊到EventTarget 上，當該對象觸髮指定的事件時，指定的回調函數就會被執行。
+            // change 通用更改事件。
+            document.getElementById("places-select").addEventListener("change", showPlaces);
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/geocode-and-search/find-places/">官方範例</a>
+</body>
+</html>

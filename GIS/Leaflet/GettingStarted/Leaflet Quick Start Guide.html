@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet 快速入門教學</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #mapid {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="mapid"></div>
+    
+    <script>
+        // map('id') 地圖
+        // setView([地理坐標], 縮放級別)
+        // 設計一個籃子儲存地圖中心座標
+        var mymap = L.map('mapid').setView([51.505, -0.09], 13);
+
+        // // https://ithelp.ithome.com.tw/articles/10201574 IT塔塔墨-範例
+        // L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        //     maxZoom: 14,
+        //     attribution: 'Map data: © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        // }).addTo(mymap);
+
+        // tileLayer(地圖框網址, {})圖層
+        L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+            // 最大縮放
+            maxZoom: 18,
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+            id: 'mapbox/streets-v11',
+            // 地圖尺寸
+            tileSize: 512,
+            // 地圖偏移
+            zoomOffset: -1
+        }).addTo(mymap);
+    </script>
+
+    <!-- 標記、圓和多邊形 -->
+    <script>
+        // marker([地理坐標]) 標記符號(地圖上標記符號)
+        var marker = L.marker([51.5, -0.09]).addTo(mymap);
+
+        // circle 圓圈
+        var circle = L.circle([51.508, -0.11], {
+            // 邊色(寬色)
+            color: 'red',
+            // 填滿
+            fillColor: '#f03',
+            // 透明度
+            fillOpacity: 0.5,
+            // 半徑
+            radius: 500
+        }).addTo(mymap);
+
+        // 多邊形
+        var polygon = L.polygon([
+            // 以下為座標
+            [51.509, -0.08],
+            [51.503, -0.06],
+            [51.51, -0.047]
+        ]).addTo(mymap);
+    </script>
+
+    <!-- 使用彈出窗口 -->
+    <script>
+        // bindPopup 點擊彈出視窗
+        // openPopup 網頁啟動時打開
+        marker.bindPopup("<b>你好阿</b><br>我是視窗").openPopup();
+        circle.bindPopup("I am a circle.");
+        polygon.bindPopup("I am a polygon.");
+    </script>
+    <script>
+        // popup 彈出
+        var popup = L.popup()
+        // setLatLng([地理座標]) 設定緯度
+        .setLatLng([51.5, -0.09])
+        // setContent 設定內容
+        .setContent("I am a standalone popup.")
+        // openOn 網頁啟動時打開
+        .openOn(mymap);
+    </script>
+
+    <!-- 處理事件 -->
+    <script>
+        function onMapClick(e) {
+            // alert 嵌入式頁面
+            // latlng 緯度
+            alert("You clicked the map at " + e.latlng);
+        }
+
+        // 觸發 onMapClick方法
+        mymap.on('click', onMapClick);
+    </script>
+    <script>
+        // popup 彈出
+        var popup = L.popup();
+
+        function onMapClick(e) {
+            popup
+                // setLatLng(緯度) 設定緯度
+                .setLatLng(e.latlng)
+                // setContent 設定內容
+                .setContent("You clicked the map at " + e.latlng.toString())
+                // openOn 網頁啟動時打開
+                .openOn(mymap);
+        }
+        // 觸發 onMapClick方法
+        mymap.on('click', onMapClick);
+    </script>
+    <a href="https://leafletjs.com/examples/quick-start/">官網範例連結</a>
+</body>
+</html>

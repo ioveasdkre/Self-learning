@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>區塊選擇</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css.map" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+
+    .ol-dragbox {
+        background-color: rgba(255, 0, 0, 0.4);
+    }
+</style>
+
+<body>
+    <h1>區塊選擇</h1>
+    <div id="map" class="map"></div>
+    <ol id="info" class="ol-dragbox">未選擇任何國家/地區</ol>
+    <h4>此示例顯示如何使用DragBox交互來選擇要素。所選功能將添加到選擇交互 ( ol.interaction.Select)的功能疊加中以突出顯示。</h4>
+    <h4>請點擊國家/地區，或按住 Shift點擊選取多個區域。</h4>
+    <script>
+        // 為矢量圖層提供特徵源。此源提供的矢量特徵適合編輯(geojson檔)。
+        var vectorSource = new ol.source.Vector({
+            // 檔案路徑
+            url: 'https://openlayers.org/en/v4.6.5/examples/data/geojson/countries.geojson',
+            // format  XHR 功能加載器在url設置時使用的功能格式。如果url設置，則為必需，否則忽略。
+            // ol.format.GeoJSON 用於以 GeoJSON 格式讀取和寫入數據的特徵格式。
+            format: new ol.format.GeoJSON()
+        });
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM()
+                }),
+                // 在客戶端呈現的矢量數據(geojson檔)。
+                new ol.layer.Vector({
+                    source: vectorSource
+                })
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2
+            })
+        });
+
+        // 一個正常的選擇交互來處理點擊
+        // ol.interaction.Select 用於選擇矢量特徵的交互。
+        var select = new ol.interaction.Select();
+        // 將給定的交互添加到地圖。如果你想在收集使用的另一點添加一個互動getInteraction()和可用的方法module:ol/Collection~Collection。這可用於停止來自 handleEvent 函數的事件傳播。交互以與此集合相反的順序處理事件。
+        map.addInteraction(select);
+
+        // 獲取選定的功能(特徵)。
+        var selectedFeatures = select.getFeatures();
+
+        // 用於通過繪製框選擇特徵的 DragBox 交互
+        // ol.interaction.DragBox 允許用戶通過在地圖上單擊和拖動來繪製矢量框，通常與module:ol/events/condition限制它在按住 shift 或其他鍵時結合使用。
+        var dragBox = new ol.interaction.DragBox({
+            // condition 一個函數，它接受一個module:ol/MapBrowserEvent~MapBrowserEvent並返回一個布爾值來指示是否應該處理該事件。
+            // ol.events.condition.platformModifierKeyOnly 返回true如果只平台修改鍵（在Mac上的元鍵，Ctrl鍵，否則）被按下，false否則（例如，當額外的shift鍵被按下）。
+            condition: ol.events.condition.platformModifierKeyOnly
+        });
+
+        // 將給定的交互添加到地圖。如果你想在收集使用的另一點添加一個互動getInteraction()和可用的方法module:ol/Collection~Collection。這可用於停止來自 handleEvent 函數的事件傳播。交互以與此集合相反的順序處理事件。
+        map.addInteraction(dragBox);
+
+        // 選取多個區域
+        dragBox.on('boxend', function () {
+            // 與框相交的要素被添加到選定要素的集合中
+            // getGeometry 返回最後繪製的框的幾何形狀。
+            // getExtent 返回視圖投影（或用戶投影，如果設置）中的當前繪製範圍
+            var extent = dragBox.getGeometry().getExtent();
+            // forEachFeatureIntersectingExtent 遍歷幾何與提供的範圍相交的所有要素，對每個要素調用回調。如果回調返回一個“真實”值，迭代將停止並且函數將返回相同的值。
+            vectorSource.forEachFeatureIntersectingExtent(extent, function (feature) {
+                // 添加一個或多個元素至陣列的末端，並且回傳陣列的新長度。
+                selectedFeatures.push(feature);
+            });
+        });
+
+        // 繪製新框和單擊地圖時清除選擇
+        dragBox.on('boxstart', function () {
+            // 從一個 Set 物件中移除其所有元素。
+            selectedFeatures.clear();
+        });
+
+        // 抓取 id
+        var infoBox = document.getElementById('info');
+
+        selectedFeatures.on(['add', 'remove'], function () {
+            // getArray 獲取對底層 Array 對象的引用。警告：如果數組發生變異，則集合不會調度任何事件，並且集合的“長度”屬性將與數組的實際長度不同步。
+            var names = selectedFeatures.getArray().map(function (feature) {
+                // get(key) 獲取一個值。
+                return feature.get('name');
+            });
+
+            // 抓取國家/地區名稱
+            if (names.length > 0) {
+                // innerHTML 獲取或設置元素中包含的HTML或XML標記。
+                // join(要取代, 的元素) 將陣列（或一個類陣列（array-like）物件）中所有的元素連接、合併成一個字串，並回傳此字串。
+                infoBox.innerHTML = names.join(', ');
+            }
+            else {
+                // 獲取或設置元素中包含的HTML或XML標記。
+                infoBox.innerHTML = 'No countries selected';
+            }
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/v4.6.5/examples/box-selection.html">官方範例</a>
+</body>
+
+</html>

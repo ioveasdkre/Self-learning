@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖標位置修改</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>圖標位置修改</h1>
+    <div id="map" class="map"></div>
+    <h4>可以拖動此地圖上的圖標來修改其位置。</h4>
+    <h4>可以使用hitDetection選項配置修改交互。使用此選項，修改候選者將不會由 確定pixelTolerance，而是匹配幾何體的視覺外觀。</h4>
+    <script>
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const iconFeature = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Point([0, 0]),
+            // 名稱
+            name: 'Null Island',
+            // 人口
+            population: 4000,
+            // 雨量
+            rainfall: 500,
+        });
+
+        // 設定風格
+        const iconStyle = new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 錨。默認值為圖標中心。
+                anchor: [0.5, 46],
+                // 指定錨點 x 值的單位。值'fraction'表示 x 值是圖標的一小部分。
+                anchorXUnits: 'fraction',
+                // 指定錨點 y 值的單位。值'pixels'表示以像素為單位的 y 值。
+                anchorYUnits: 'pixels',
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/icon.png',
+            }),
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        iconFeature.setStyle(iconStyle);
+
+        // 為矢量圖層提供特徵源。
+        const vectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [iconFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vectorLayer = new ol.layer.Vector({
+            // 來源。
+            source: vectorSource,
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const rasterLayer = new ol.layer.Tile({
+            // 來源。:TileJSON 格式的圖塊數據的圖層源。
+            source: new ol.source.TileJSON({
+                // TileJSON 文件的 URL。
+                url: 'https://a.tiles.mapbox.com/v3/aj.1x1-degrees.json?secure=1',
+                // crossOrigin加載圖像的屬性。
+                crossOrigin: '',
+            }),
+        });
+
+        const target = document.getElementById('map');
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [rasterLayer, vectorLayer],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: target,
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 3,
+            }),
+        });
+
+        // 用於修改特徵幾何的交互。
+        const modify = new ol.interaction.Modify({
+            // 配置後，點要素將根據其視覺外觀考慮進行修改，而不是pixelTolerance在指針位置內。
+            hitDetection: vectorLayer,
+            // 具有要修改的特徵的矢量來源。
+            source: vectorSource,
+        });
+
+        // modifystart 在功能修改開始時觸發
+        // modifyend 功能修改結束時觸發
+        modify.on(['modifystart', 'modifyend'], function (evt) {
+            // 型態如果等於開始前 回傳抓取，否則傳回數量
+            target.style.cursor = evt.type === 'modifystart' ? 'grabbing' : 'pointer';
+        });
+
+        // getOverlay 獲取此交互將修改點或頂點渲染到的疊加層。
+        // getSource 獲取圖層來源。
+        const overlaySource = modify.getOverlay().getSource();
+
+        // addfeature 添加功能
+        // removefeature 移除特徵
+        overlaySource.on(['addfeature', 'removefeature'], function (evt) {
+            // 型態如果等於添加功能 回傳數量，否則傳回空值
+            target.style.cursor = evt.type === 'addfeature' ? 'pointer' : '';
+        });
+
+        // 將給定的交互添加到地圖。
+        map.addInteraction(modify);
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/modify-icon.html">官方範例</a>
+</body>
+
+</html>

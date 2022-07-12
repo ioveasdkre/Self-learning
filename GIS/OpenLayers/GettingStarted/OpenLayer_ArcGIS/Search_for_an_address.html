@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顯示自定義矢量平鋪樣式</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 地理編碼助手 -->
+    <script src="Js/geocoding.umd.min.js"></script>
+    <!-- ArcGIS 身份驗證助手 -->
+    <script src="Js/auth.umd.min.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+    .search {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+    #geocode-input,
+    #geocode-button {
+        font-size: 16px;
+        margin: 0 2px 0 0;
+        padding: 4px 8px;
+    }
+    #geocode-input {
+        width: 300px;
+    }
+</style>
+<body>
+    <h1>顯示自定義矢量平鋪樣式</h1>
+    <h4>了解如何使用搜索框和地理編碼服務.</h4>
+    <div id="map" class="map"></div>
+    <div class="search">
+        <input id="geocode-input" type="text" placeholder="輸入地址或地點，例如 約克街 1 號" size="50" />
+        <button id="geocode-button">Geocode</button>
+    </div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>地理編碼是將地址或地點文本轉換為位置的過程。這地理編碼服務提供地址和地點地理編碼和反向地理編碼。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([151.2093, -33.8688]), // 悉尼
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Navigation";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 加入圖層
+        olms(map, basemapURL);
+
+        // 產生一個彈跳視窗
+        const popup = new Popup();
+        // 將給定的疊加層添加到地圖中。
+        map.addOverlay(popup);
+
+        // 抓取按鈕標籤
+        // addEventListener 將指定的監聽器到上面EventTarget 的事件，當指定對象的事件時，註冊指定的函數目標就會被執行。
+        // click 無需拖動即可單擊
+        document.getElementById("geocode-button").addEventListener("click", () => {
+            // 抓取 input值
+            const query = document.getElementById("geocode-input").value;
+            // 用於使用 API密鑰進行身份驗證。
+            const authentication = new arcgisRest.ApiKey({
+                // key: value
+                key: apiKey
+            });
+
+            // ol.proj.transform(座標, 來源, 目標) 將坐標從經度/緯度轉換為不同的投影。
+            // getView() 獲取與此地圖關聯的視圖。
+            // getCenter() 獲取視圖中心。
+            const center = ol.proj.transform(map.getView().getCenter(), "EPSG:3857", "EPSG:4326");
+            // 用於確定單個地址或興趣點的位置。
+            arcgisRest.geocode({
+                // 地址或地點
+                singleLine: query,
+                // API密鑰驗證
+                authentication,
+                // 參數
+                params: {
+                    // 外場
+                    outFields: "*",
+                    // 地點: 將陣列（或一個類陣列（array-like）物件）中所有的元素連接、合併成一個字串，並回傳此字串。
+                    location: center.join(","),
+                    // 輸出座標系統
+                    outSR: 3857 // 在 Web Mercator中請求坐標以簡化顯示
+                }
+            })
+            // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+            .then((response) => {
+                // 抓取資料
+                const result = response.candidates[0];
+                // 判斷資料型態與類別不等於 0
+                if (!result === 0) {
+                    alert("該查詢與任何地理編碼結果都不匹配。");
+                    return;
+                }
+
+                // [經度, 緯度]
+                const coords = [result.location.x, result.location.y];
+                // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                popup.show(coords, result.attributes.LongLabel);
+                // getView() 獲取與此地圖關聯的視圖。
+                // getCenter() 設定視圖中心。
+                map.getView().setCenter(coords);
+            })
+            // error處理
+            .catch((error) => {
+                alert("使用地理編碼器時出現問題。 有關詳細信息，請參閱控制台。");
+                console.error(error);
+            });
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/geocode-and-search/search-for-an-address/">官方範例</a>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顯示視頻文件-添加視頻疊加</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <!-- 添加視頻疊加 -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map');
+    
+        // 首先，創建一個 Leaflet 地圖，並L.TileLayer以通常的方式添加背景：
+        // 圖層
+        L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+            // 最大縮放
+            maxZoom: 18,
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+            id: 'mapbox/satellite-v9',
+            // 地圖尺寸
+            tileSize: 512,
+            // 地圖偏移
+            zoomOffset: -1
+        }).addTo(map);
+
+        var videoUrls = [
+                'https://www.mapbox.com/bites/00188/patricia_nasa.webm',
+                'https://www.mapbox.com/bites/00188/patricia_nasa.mp4'
+            ],
+
+        // 然後，我們將定義視頻將覆蓋的地理範圍。這是 的一個實例L.LatLngBounds，它是一個矩形：
+        // LatLngBounds{東北: , 西南: } 表示地圖上的矩形地理區域。
+        bounds = L.latLngBounds([[ 32, -130], [ 13, -100]]);
+
+        // fitBounds 設置一個地圖視圖，其中包含具有最大縮放級別的給定地理邊界。
+        map.fitBounds(bounds);
+
+        // videoOverlay 視頻疊加(視頻路徑, 界線(方位), 選樣設定(style))
+        var overlay = L.videoOverlay(videoUrls, bounds, {
+            // 透明度
+            opacity: 0.8,
+            // 工具提示將偵聽功能事件。
+            interactive: true
+        });
+
+        // 將給定的圖層添加到地圖
+        map.addLayer(overlay); 
+    </script>
+    <a href="https://leafletjs.com/examples/video-overlay/">官網範例連結</a>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設計手機全屏地圖(需使用手機瀏覽)</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+    
+    <!-- 移動瀏覽器禁用不需要的頁面縮放並將其設置為實際大小 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    #map {
+        height: 100%;
+        width: 100vw;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <script>
+        var map = L.map('map').fitWorld();
+        
+        // 圖層
+        L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		// 最大縮放
+        maxZoom: 18,
+        // 可以放入版權資訊的字串，格式為 html
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox/streets-v11',
+        // 地圖尺寸
+		tileSize: 512,
+        // 地圖偏移
+		zoomOffset: -1
+	}).addTo(map);
+    </script>
+
+    <!-- 地理位置 -->
+    <script>
+        // locate 定位 setView 設定視圖 maxZoom 最大縮放
+        map.locate({setView: true, maxZoom: 16});
+
+        function onLocationFound(e) {
+            // accuracy 準確性
+            var radius = e.accuracy;
+
+            // marker 標記 latlng 緯度
+            L.marker(e.latlng).addTo(map)
+                // bindPopup 點擊彈出視窗
+                // openPopup 網頁啟動時打開
+                .bindPopup("You are within " + radius + " meters from this point").openPopup();
+
+            // circle 圓圈
+            L.circle(e.latlng, radius).addTo(map);
+        }
+
+        // locationfound 找到位置
+        map.on('locationfound', onLocationFound);
+
+
+        function onLocationError(e) {
+            // alert 嵌入式頁面
+            alert(e.message);
+        }
+        
+        // locationerror 定位錯誤
+        map.on('locationerror', onLocationError);
+    </script>
+    <a href="https://leafletjs.com/examples/mobile/">官網範例連結</a>
+</body>
+</html>

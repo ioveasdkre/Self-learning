@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴展傳單：處理程序和控件-控件</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <!-- 控件 -->
+    <!-- 您已經知道控件 - 左上角的縮放控件、左下角的縮放、右上角的圖層切換器。本質上，anL.Control是一個 HTML 元素，位於地圖容器中的靜態位置。
+    要製作控件，只需繼承L.Control並實現onAdd()and onRemove()。這些方法的工作方式與它們的L.Layer對應方法類似（只要將控件添加到地圖或從地圖中刪除它們就會運行），除了onAdd()必須返回HTMLElement表示控件的實例。將元素添加到地圖是自動完成的，刪除它也是如此。
+    自定義控件的最簡單示例是水印，它只是一個圖像： -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 中心點
+            center: [40, 0],
+            // 縮放等級
+            zoom: 1
+        });
+    
+        // tileLayer(地圖框網址, {})圖層
+        var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>'
+        }).addTo(map);
+    
+        // L.Control.extend 是實現地圖控件的基類。處理定位。所有其他控件都從此類擴展。
+        // L.Control.自訂名稱
+        L.Control.Watermark = L.Control.extend({
+            onAdd: function(map) {
+                // create('標籤', 'class名稱') 新增一筆資料
+                // DomUtil 新增資料使用
+                var img = L.DomUtil.create('img');
+                
+                // 圖片路徑
+                img.src = 'img/logo.png';
+                // 寬度
+                img.style.width = '200px';
+                
+                return img;
+            },
+            
+            onRemove: function(map) {
+                // Nothing to do here
+            }
+        });
+
+        // L.control.extend 是實現地圖控件的基類。處理定位。所有其他控件都從此類擴展。
+        // L.control.自訂名稱
+        L.control.watermark = function(opts) {
+            return new L.Control.Watermark(opts);
+        }
+        
+        // position: 'bottomleft' 位置: 左下方
+        L.control.watermark({ position: 'bottomleft' }).addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/extending/extending-3-controls.html">官網範例連結</a>
+</body>
+</html>

@@ -1,0 +1,100 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Leaflet Quick Start Guide Example</title>
+	<meta charset="utf-8" />
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+</head>
+<body>
+	<div id="map" style="width: 600px; height: 400px"></div>
+
+	<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+	<script>
+
+		//設定圖面顯示位置與比例尺
+		var map = L.map('map').setView([24.1558311, 120.652411], 14);
+		/*
+		//載入外面osm主機底圖(MapQuest街道)
+		L.tileLayer('http://otile{s}.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg', { 
+			maxZoom: 18,
+			attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> ',
+			subdomains: "1234"
+		}).addTo(map);
+		*/
+		/*
+		//載入公司osm底圖
+		L.tileLayer('http://ecolife.eri.com.tw/{id}/{z}/{x}/{y}.png', {
+			maxZoom: 18,
+			attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> ',
+			id: 'osm'
+		}).addTo(map);
+		*/
+		
+		
+		//載入外面osm主機底圖(OSM)
+		L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+			// 最大縮放
+			maxZoom: 18,
+			// 可以放入版權資訊的字串，格式為 html
+			attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> '
+		}).addTo(map);
+		
+		
+		//佈點
+		L.marker([24.1558311, 120.652411]).addTo(map)
+			.bindPopup("<b>Hello world!</b><br />I am a popup.").openPopup();
+		L.marker([24.2558311, 120.752411]).addTo(map)
+			.bindPopup("<b>happy world!</b><br />Today is Thursday.").openPopup();
+
+		//畫圓
+		L.circle([24.1558511, 120.652511], 500, {
+			// 邊框顏色
+			color: 'red',
+			// 填滿
+			fillColor: '#f03',
+			// 透明度
+			fillOpacity: 0.5
+			// bindPopup 提示視窗
+		}).addTo(map).bindPopup("I am a circle.");
+
+		//畫多邊形
+		L.polygon([
+			[24.16046, 120.63641],
+			[24.1484, 120.62997],
+			[24.14511, 120.63864]
+			// bindPopup 提示視窗
+		]).addTo(map).bindPopup("I am a polygon.");
+		
+		// 畫線段
+		var polyline = L.polyline([
+			[24.1661, 120.63194],
+			[24.16555, 120.66104],
+			[24.16077, 120.66679]
+		], {color: 'red'}).addTo(map);
+
+		//顯示到線段的位置與比例尺
+		//map.fitBounds(polyline.getBounds());
+
+
+		// popup 彈出
+		var popup = L.popup();
+
+		function onMapClick(e) {
+			popup
+				// 讀取座標
+				.setLatLng(e.latlng)
+				// 設定內容
+				.setContent("You clicked the map at " + e.latlng.toString())
+				// 網頁啟動時打開
+				.openOn(map);
+		}
+
+		// 觸發 onMapClick方法
+		map.on('click', onMapClick);
+	</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顯示彈出窗口</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>顯示彈出窗口</h1>
+    <h4>了解如何顯示特徵a中的屬性彈出.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>一個彈出，也稱為“彈出窗口”，是顯示有關特徵當它被點擊時。您通常使用 HTML 和 CSS 為每個彈出窗口設置樣式和配置層在地圖中。彈出窗口可以顯示屬性值、計算值或豐富的內容，例如圖像、圖表或視頻。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-118.805, 34.027]),
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Streets";
+        const trailheadsLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+            format: new ol.format.GeoJSON(),
+                url: `https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=pgeojson`
+            })
+        });
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey).then(function (map) {
+            // 加入圖層
+            map.addLayer(trailheadsLayer);
+        });
+
+        // 產生一個彈跳視窗
+        const popup = new Popup();
+        // 將給定的疊加層添加到地圖中。
+        map.addOverlay(popup);
+
+        // 無需拖動即可單擊。雙擊將觸發其中兩個。
+        map.on("click", (event) => {
+            // 儲存撈取的資料
+            let trailName, parkName;
+
+            // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+            const trailheads = map.getFeaturesAtPixel(event.pixel, {
+                // 圖層過濾器(註: 判斷圖層名稱 === 指定的圖層名稱)
+                layerFilter: (layer) => layer === trailheadsLayer
+            });
+
+            // 判斷 資料長度大於 0
+            if (trailheads.length > 0) {
+                // get(key) 抓取 key值
+                const trailName = trailheads[0].get("TRL_NAME");
+                // get(key) 抓取 key值
+                const parkName = trailheads[0].get("PARK_NAME");
+                // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                popup.show(event.coordinate, `<b>${trailName}</b></br>${parkName}`);
+
+                } else {
+                    // 隱藏視窗
+                    popup.hide();
+            }
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/layers/display-a-popup/">官方範例</a>
+</body>
+</html>

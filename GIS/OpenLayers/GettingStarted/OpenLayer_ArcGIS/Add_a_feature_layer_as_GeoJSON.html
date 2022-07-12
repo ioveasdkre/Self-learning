@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>將要素圖層添加為 GeoJSON</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>將要素圖層添加為 GeoJSON</h1>
+    <h4>了解如何添加特徵從要素圖層到一個地圖.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>一個要素層是託管中的數據集特色服務. 每個要素圖層包含特徵與單幾何學類型（點、線或多邊形）和一組屬性. 您可以通過向要素服務發出查詢請求並將其顯示在地圖中來訪問和顯示要素。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-118.805, 34.027]),
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Streets";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, basemapURL).then((map) => {
+            //#region point [ 點位設定 ]
+            // 點位圖層名稱
+            const pointLayerName = "Trailheads";
+            // 點位圖層 Url
+            const pointLayerURL =
+            "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/" +
+            pointLayerName +
+            "/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=geojson";
+
+            // 為矢量圖層提供特徵源。
+            const pointSource = new ol.source.Vector({
+                // 設置時 XHR 功能加載器使用的功能格式url: 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                format: new ol.format.GeoJSON(),
+                // 網址
+                url: pointLayerURL
+            });
+
+            // 在客戶端呈現的矢量數據。
+            const pointLayer = new ol.layer.Vector({
+                // 來源
+                source: pointSource
+            });
+
+            // 加入圖層
+            map.addLayer(pointLayer);
+            //#endregion
+
+            //#region line [ 折線圖設定 ]
+            // 折線圖圖層名稱
+            const lineLayerName = "Trails";
+            // 折線圖圖層 Url
+            const lineLayerURL =
+            "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/" +
+            lineLayerName +
+            "/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=geojson";
+
+            // 為矢量圖層提供特徵源。
+            const lineSource = new ol.source.Vector({
+                // 設置時 XHR 功能加載器使用的功能格式url: 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                format: new ol.format.GeoJSON(),
+                // 網址
+                url: lineLayerURL
+            });
+
+            // 在客戶端呈現的矢量數據。
+            const lineLayer = new ol.layer.Vector({
+                // 來源
+                source: lineSource
+            });
+
+            // 加入圖層
+            map.addLayer(lineLayer);
+            //#endregion
+
+            //#region polygon [ 多邊形設定 ]
+            // 多邊形圖層名稱
+            const polygonLayerName = "Parks_and_Open_Space";
+            // 多邊形圖層 Url
+            const polygonLayerURL =
+            "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/" +
+            polygonLayerName +
+            "/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&f=geojson";
+
+            // 為矢量圖層提供特徵源。
+            const polygonSource = new ol.source.Vector({
+                // 設置時 XHR 功能加載器使用的功能格式url: 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                format: new ol.format.GeoJSON(),
+                // 網址
+                url: polygonLayerURL
+            });
+
+            // 在客戶端呈現的矢量數據。
+            const polygonLayer = new ol.layer.Vector({
+                // 來源
+                source: polygonSource
+            });
+
+            // getLayers 獲取與此地圖關聯的圖層集合。
+            // insertAt(索引(位置), 元素) 在提供的索引處插入一個元素。
+            map.getLayers().insertAt(1, polygonLayer);
+            //#endregion
+
+            // 產生一個彈跳視窗
+            const popup = new Popup();
+
+            // 將給定的疊加層添加到地圖中。
+            map.addOverlay(popup);
+
+            // 無需拖動即可單擊。雙擊將觸發其中兩個。
+            map.on("click", (event) => {
+                // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+                let feature = map.getFeaturesAtPixel(event.pixel, {
+                    // 圖層過濾器(註: 判斷圖層名稱 === 指定的圖層名稱)
+                    layerFilter: (l) => l === pointLayer
+                })[0];
+
+                // 判斷是否有值
+                if (feature) {
+                    // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                    popup.show(event.coordinate, `<h4>${feature.get("TRL_NAME")}</h4>${feature.get("PARK_NAME")}`);
+                    return;
+                }
+
+                // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+                feature = map.getFeaturesAtPixel(event.pixel, {
+                    // 圖層過濾器(註: 判斷圖層名稱 === 指定的圖層名稱)
+                    layerFilter: (l) => l === lineLayer
+                })[0];
+
+                // 判斷是否有值
+                if (feature) {
+                    // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                    popup.show(event.coordinate, `<h4>${feature.get("TRL_NAME")}</h4>${feature.get("LENGTH_MI")} miles, ${feature.get("ELEV_GAIN")} feet elevation gain.`);
+                    return;
+                }
+
+                // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+                feature = map.getFeaturesAtPixel(event.pixel, {
+                    // 圖層過濾器(註: 判斷圖層名稱 === 指定的圖層名稱)
+                    layerFilter: (l) => l === polygonLayer
+                })[0];
+
+                // 判斷是否有值
+                if (feature) {
+                    // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                    popup.show(event.coordinate, `<h4>${feature.get("PARK_NAME")}</h4>${feature.get("MNG_AGENCY")}`);
+                    return;
+                }
+
+                // 隱藏視窗
+                popup.hide();
+            });
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/layers/add-a-feature-layer-as-geojson/">官方範例</a>
+</body>
+</html>

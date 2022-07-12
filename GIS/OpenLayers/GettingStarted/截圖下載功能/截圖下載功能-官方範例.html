@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>截圖下載功能-官方範例</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="../OpenLayers_Kit/ol.css" type="text/css">
+    <!-- bootstrap.min.css -->
+    <link rel="stylesheet" href="../Js/bootstrap-5.1.3-dist/css/bootstrap.min.css">
+    <!--load all styles 文字圖形-->
+    <link rel="stylesheet" href="../css/all.css">
+
+    <!-- OpenLayers Library -->
+    <script src="../OpenLayers_Kit/ol.js"></script>
+    <!-- jQuery_3.6.0.js -->
+    <script src="../Js/jQuery_3.6.0.js"></script>
+    <!-- bootstrap.bundle.min.js -->
+    <script src="../Js/bootstrap-5.1.3-dist/Js/bootstrap.bundle.min.js"></script>
+    <!-- core-js 使用 api的套件-->
+    <script src="../Js/core3.20.3.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+
+    .ol-popup {
+        position: absolute;
+        background-color: white;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #cccccc;
+        bottom: 12px;
+        left: -50px;
+        min-width: 280px;
+    }
+
+    .ol-popup:after,
+    .ol-popup:before {
+        top: 100%;
+        border: solid transparent;
+        content: " ";
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+    }
+
+    .ol-popup:after {
+        border-top-color: white;
+        border-width: 10px;
+        left: 48px;
+        margin-left: -10px;
+    }
+
+    .ol-popup:before {
+        border-top-color: #cccccc;
+        border-width: 11px;
+        left: 48px;
+        margin-left: -11px;
+    }
+
+    /* 彈跳視窗關閉 */
+    .ol-popup-closer {
+        text-decoration: none;
+        position: absolute;
+        top: 2px;
+        right: 8px;
+    }
+
+    .ol-popup-closer:after {
+        content: "✖";
+    }
+</style>
+
+<body>
+    <h1>截圖下載功能-官方範例</h1>
+    <!-- 地圖容器 -->
+    <div id="map" class="map"></div>
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div>
+    <a id="export-png" class="btn btn-light"><i class="fas fa-download"></i>Download PNG</a>
+    <!-- download 指定下載檔名 -->
+    <a id="image-download" download="map.png"></a>
+    <h4>說明：下載地圖存為 map.png檔</h4>
+    <script>
+        //#region Icon [ 圖標設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const iconFeature = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Point([120.652411, 24.1558311]),
+            name: '<b>Hello world!</b><br />I am a popup.'
+        });
+
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const iconFeature2 = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Point([120.752411, 24.2558311]),
+            name: '<b>happy world!</b><br />Today is Thursday.'
+        });
+
+        // 設定風格
+        const iconStyle = new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 錨。默認值為圖標中心。
+                anchor: [0.5, 46],
+                // 指定錨點 x 值的單位。值'fraction'表示 x 值是圖標的一小部分。
+                anchorXUnits: 'fraction',
+                // 指定錨點 y 值的單位。值'pixels'表示以像素為單位的 y 值。
+                anchorYUnits: 'pixels',
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/icon.png',
+                crossOrigin:'Anonymous',
+            }),
+        });
+
+        // 設定風格
+        const iconStyle2 = new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 錨。默認值為圖標中心。
+                anchor: [0.5, 46],
+                // 指定錨點 x 值的單位。值'fraction'表示 x 值是圖標的一小部分。
+                anchorXUnits: 'fraction',
+                // 指定錨點 y 值的單位。值'pixels'表示以像素為單位的 y 值。
+                anchorYUnits: 'pixels',
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/icon.png',
+                // 如果使用 Canvas繪畫功能，需使用選項，否則無法繪畫。
+                crossOrigin:'Anonymous',
+            }),
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        iconFeature.setStyle(iconStyle);
+        iconFeature2.setStyle(iconStyle2);
+
+        // 為矢量圖層提供特徵源。
+        const iconvectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [iconFeature, iconFeature2],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const iconLayer = new ol.layer.Vector({
+            // 來源。
+            source: iconvectorSource,
+        });
+        //#endregion
+
+        //#region Circle [ 圓形設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const circleFeature = new ol.Feature({
+            // 特徵的默認幾何:圓形幾何。
+            // ol.geom.Circle(中心(座標), 半徑,佈局(註:選填))
+            geometry: new ol.geom.Circle([120.652511, 24.1558511], 0.005),
+            name: 'I am a circle.'
+        });
+
+        // 設定風格
+        const circlestyle = new ol.style.Style({
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: 'red', // 紅色
+                // 邊線寬度
+                width: 3,
+            }),
+            // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(255, 0, 51, 0.5)', // 紅色
+            }),
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        circleFeature.setStyle(circlestyle);
+
+        // 為矢量圖層提供特徵源。
+        const circlevectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [circleFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const circleLayer = new ol.layer.Vector({
+            // 來源。
+            source: circlevectorSource,
+        });
+        //#endregion
+
+        //#region Polygon [ 多邊形設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const polygonFeature = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Polygon([
+                [
+                    [120.63641, 24.16046],
+                    [120.62997, 24.1484],
+                    [120.63864, 24.14511],
+                    [120.63641, 24.16046],
+                ],
+            ]),
+            name: 'I am a Polygon.'
+        });
+
+        // 設定風格
+        const polygonStyle = new ol.style.Style({
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: 'blue', // 藍色
+                // 邊線寬度
+                width: 3,
+            }),
+            // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(0, 0, 255, 0.1)', // 藍色
+            }),
+        })
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        polygonFeature.setStyle(polygonStyle);
+
+        // 為矢量圖層提供特徵源。
+        const polygonvectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [polygonFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const polygonLayer = new ol.layer.Vector({
+            // 來源。
+            source: polygonvectorSource,
+        });
+        //#endregion
+
+        //#region LineString [ 折線設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const lineFeature = new ol.Feature({
+            // 特徵的默認幾何:線串幾何。
+            geometry: new ol.geom.LineString([
+                [120.63194, 24.1661],
+                [120.66104, 24.16555],
+                [120.66679, 24.16077]
+            ]),
+            name: 'I am a LineString.'
+        });
+
+        // 設定風格
+        const lineStyle = new ol.style.Style({
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: 'red', // 紅色
+                // 邊線寬度
+                width: 3,
+            })
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        lineFeature.setStyle(lineStyle);
+
+        // 為矢量圖層提供特徵源。
+        const linevectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [lineFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const lineLayer = new ol.layer.Vector({
+            // 來源。
+            source: linevectorSource,
+        });
+        //#endregion
+
+        //#region Popup [ 彈出視窗 ]
+        /**
+         * 構成彈出窗口的元素。
+         */
+        // 彈出視窗
+        const container = document.getElementById('popup');
+        // 彈出內容
+        const content = document.getElementById('popup-content');
+        // 彈出關閉器
+        const closer = document.getElementById('popup-closer');
+
+        /**
+         * 創建一個疊加層以將彈出窗口錨定到地圖上。
+         */
+        // 要在地圖上顯示並附加到單個地圖位置的元素。
+        const overlay = new ol.Overlay({
+            // 疊加元素。
+            element: container,
+            // 調用時平移地圖 setPosition，以便覆蓋在當前視口中完全可見？如果true（已棄用），則 autoPanAnimation和autoPanMargin將用於確定平移參數；如果提供了一個對象，則其他參數將被忽略。
+            autoPan: true,
+            // 用於將疊加層平移到視圖中的動畫選項。此動畫僅在 autoPan啟用時使用。可以提供 Aduration和 easing來自定義動畫。如果 autoPan作為對象提供，則棄用並忽略。
+            autoPanAnimation: {
+                duration: 250,
+            },
+        });
+
+        /**
+         * 添加單擊處理程序以隱藏彈出窗口。
+         * @return {boolean} 不要跟著href。
+         */
+        closer.onclick = function () {
+            // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+            overlay.setPosition(undefined);
+            // 從當前元素中移除鍵盤焦點。
+            // 參考網址:https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/blur
+            closer.blur();
+            return false;
+        };
+        //#endregion
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 用於定義地圖中可用的圖層列表。現在第一個也是唯一的層是平鋪層：
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:來自 ArcGIS Rest 服務的切片數據的圖層源。支持地圖和影像服務。
+                    source: new ol.source.OSM({})
+                }),
+                circleLayer,
+                polygonLayer,
+                lineLayer,
+                iconLayer
+            ],
+            // 最初添加到地圖的疊加層。默認情況下，不添加疊加層。
+            overlays: [overlay],
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標系統:WGS84經緯度（全球性資料，如：GPS） ＝> EPSG:4326
+                projection: "EPSG:4326",
+                // 地圖中心地點
+                center: [120.752411, 24.2558311],
+                // 視圖縮放等級
+                zoom: 14
+            })
+        });
+
+        // getGeometry 返回將使用此樣式呈現的幾何圖形的特徵屬性或幾何圖形或函數。
+        // getCoordinates 獲取座標
+        const coordinate = [iconFeature2.getGeometry().getCoordinates()[0], iconFeature2.getGeometry().getCoordinates()[1] + 0.003];
+
+        // 獲取或設置元素中包含的HTML或XML標記。
+        content.innerHTML = '<p>name: ' + iconFeature2.get('name') + '</p>';
+        // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+        overlay.setPosition(coordinate);
+
+        /**
+         * 向地圖添加單擊處理程序以呈現彈出窗口。
+         */
+        // click 無需拖動即可單擊
+        map.on('click', function (evt) {
+            // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+            const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
+                return feature;
+            });
+
+            console.log(feature);
+            console.log(evt.pixel);
+            if (feature) {
+                // 座標
+                const coordinate = evt.coordinate;
+
+                // 獲取或設置元素中包含的HTML或XML標記。
+                content.innerHTML = '<p>name: ' + feature.get('name') + '</p>';
+                // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+                overlay.setPosition(coordinate);
+            }
+
+            else {
+                // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+                overlay.setPosition(undefined);
+            }
+        });
+
+        // pointermove 當指針移動時觸發。請注意，在觸摸設備上，這是在平移地圖時觸發的，因此與 mousemove 不同。
+        map.on('pointermove', function (e) {
+            // 返回瀏覽器事件相對於視口的地圖像素位置。
+            // 使用原本 javascript的 event(處理)事件
+            const pixel = map.getEventPixel(e.originalEvent);
+            // 檢測要素是否與視口上的像素相交。
+            const hit = map.hasFeatureAtPixel(pixel);
+            // getTarget 獲取渲染此地圖的目標。
+            // style.cursor 鼠標光標
+            // pointer 指針(圖標)
+            map.getTarget().style.cursor = hit ? 'pointer' : '';
+        });
+
+        // addEventListener 將指定的監聽器註冊到EventTarget 上，當該對象觸髮指定的事件時，指定的回調函數就會被執行
+        // click 無需拖動即可單擊
+        document.getElementById('export-png').addEventListener('click', function () {
+            // once(type 事件類型或事件類型數組, listener 監聽器函數) 偵聽器的唯一鍵
+            // rendercomplete 渲染完成時觸發，即當前視口的所有源和圖塊都已完成加載，並且所有圖塊都淡入。事件對像不會有context集合。
+            map.once('rendercomplete', function () {
+                // createElement 可以指定的標籤名稱（ ）創建HTML元素，或者在未定義的標籤名稱下創建一個（en-US）
+                const mapCanvas = document.createElement('canvas');
+                const size = map.getSize(); // 獲取此地圖的大小。
+                mapCanvas.width = size[0]; // 寬度
+                mapCanvas.height = size[1]; // 高度
+                // 返回畫布上的繪圖上下文，或者null如果上下文標識符不受支持，或者畫布已設置為不同的上下文模式。
+                const mapContext = mapCanvas.getContext('2d');
+                // 將陣列內的每個元素，皆傳入並執行給定的函式一次
+                Array.prototype.forEach.call(
+                    // getViewport 獲取用作地圖視口的元素
+                    // querySelectorAll 返回一個靜態（非實時）NodeList，表示與指定選擇器組匹配的文檔元素列表。
+                    map.getViewport().querySelectorAll('.ol-layer canvas, canvas.ol-layer'),
+                    function (canvas) { // 畫布
+                        // 判斷 寬度大於 0
+                        if (canvas.width > 0) {
+                            // 抓取透明度
+                            const opacity = canvas.parentNode.style.opacity || canvas.style.opacity;
+                            // 判斷 透明度是否為空
+                            // globalAlpha 是 Canvas的 2D API使用描述在畫布上繪製繪圖，設置圖形和圖片範圍的屬性
+                            mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+
+                            // 背景顏色
+                            const backgroundColor = canvas.parentNode.style.backgroundColor;
+                            // 判斷 有值
+                            if (backgroundColor) {
+                                // 設置邊框顏色
+                                mapContext.fillStyle = backgroundColor;
+                                // fillRect(x 座標, y 座標, width 寬度, height 高度)
+                                // Canvas 2D API 的 方法繪製一個根據當前fillStyle. 該方法直接繪製到畫布上而不修改當前路徑
+                                mapContext.fillRect(0, 0, canvas.width, canvas.height);
+                            }
+
+                            let matrix; // 矩陣
+                            // 矩陣
+                            const transform = canvas.style.transform;
+                            // 判斷 有值
+                            if (transform) {
+                                // 從樣式的變換矩陣中獲取變換參數
+                                matrix = transform
+                                .match(/^matrix\(([^\(]*)\)$/)[1] // 「字符串」中搜索與任何「正則表達式」的匹配項
+                                .split(',')// 使用指定的分隔符字符串将一个String对象分割成子字符串数组，以一个指定的分割字串来决定每个拆分的位置
+                                // 建立一個新的陣列，其內容為原陣列的每一個元素經由回呼函式運算後所回傳的結果之集合
+                                .map(Number); // 轉換矩陣型態。 例如：['1', '5'].map(Number)。轉換後為 [1, 5]
+                            } else {
+                                // [水平縮放, 垂直傾斜, 水平傾斜, 垂直縮放, 水平平移, 垂直平移]
+                                matrix = [
+                                parseFloat(canvas.style.width) / canvas.width,
+                                0,
+                                0,
+                                parseFloat(canvas.style.height) / canvas.height,
+                                0,
+                                0,
+                                ];
+                            }
+                            // 將轉換應用於導出地圖上下文
+                            // CanvasRenderingContext2D 繪製矩形、文字、影像以及其它基於 canvas 元素的物件
+                            // setTransform 當前轉換重置（覆蓋）到單位矩陣，然後調用由該方法的參數描述的轉換
+                            // apply(thisArg this, [argsArray] matrix) 呼叫一個以 this 的代表值和一個陣列形式的值組。 回傳： this值及一組參數後得到的結果
+                            CanvasRenderingContext2D.prototype.setTransform.apply(
+                                mapContext,
+                                matrix
+                            );
+                            // void ctx.drawImage(image(來源), dx, dy, dWidth, dHeight) 提供了多種方式在 Canvas 上繪製
+                            // 參考網址:https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/drawImage
+                            mapContext.drawImage(canvas, 0, 0);
+                        }
+                    }
+                );
+                
+                // 將 File或保存 Blob到磁盤
+                if (navigator.msSaveBlob) {
+                    // 鏈接下載屬性在 MS瀏覽器上不起作用
+                    navigator.msSaveBlob(mapCanvas.msToBlob(), 'map.png'); // navigator.msSaveBlob(要保存的 blob, 保存文件時使用的文件名)
+                } else {
+                    // 讀取下載 id
+                    const link = document.getElementById('image-download');
+                    // 設定 href
+                    // toDataURL 回傳含有圖像和參數設置特定格式的 data URIs (預設 PNG). 回傳的圖像解析度為 96 dpi.
+                    link.href = mapCanvas.toDataURL();
+                    // 點擊事件
+                    link.click();
+                }
+            });
+            // 以同步方式請求立即渲染。
+            map.renderSync();
+        });
+    </script>
+</body>
+
+</html>

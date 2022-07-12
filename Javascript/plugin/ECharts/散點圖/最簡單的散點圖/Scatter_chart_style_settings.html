@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>散點圖樣式設置</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+    </svg>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 800px;height:600px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // X座標
+            xAxis: {
+                data: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            },
+            // Y座標
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 散點圖
+                    type: 'scatter',
+                    // 數據
+                    data: [220, 182, 191, 234, 290, 330, 310],
+                    // 符號大小
+                    symbolSize: 20,
+                    // 符號 or圖片
+                    symbol:
+                        'path://M51.911,16.242C51.152,7.888,45.239,1.827,37.839,1.827c-4.93,0-9.444,2.653-11.984,6.905 c-2.517-4.307-6.846-6.906-11.697-6.906c-7.399,0-13.313,6.061-14.071,14.415c-0.06,0.369-0.306,2.311,0.442,5.478 c1.078,4.568,3.568,8.723,7.199,12.013l18.115,16.439l18.426-16.438c3.631-3.291,6.121-7.445,7.199-12.014 C52.216,18.553,51.97,16.611,51.911,16.242z'
+                    //symbol:'image://../../img/星星.png'
+                }
+            ]
+        };
+        //#endregion
+
+        // 使用剛指定的配置項和數據顯示圖表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/scatter/basic-scatter">官網範例連結</a>
+</body>
+
+</html>

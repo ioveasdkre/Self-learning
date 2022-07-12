@@ -1,0 +1,23 @@
+1.Display_a_map                         顯示地圖
+2.Change_the_basemap_layer              更改底圖圖層
+3.Add_a_vector_tile_layer               添加矢量切片圖層
+4.Add_a_feature_layer_as_GeoJSON        將要素圖層添加為 GeoJSON
+5.Add_a_raster_tile_layer               添加柵格切片圖層
+
+6.Display_a_pop-up                      顯示彈出窗口
+7.Query_features_with_SQL               使用 SQL查詢功能
+8.Query_a_feature_layer_(spatial)       查詢要素圖層（空間）
+9.Style_a_feature_layer                 為要素圖層設置樣式
+10.Display_a_custom_vector_tile_style   顯示自定義矢量平鋪樣式
+
+11.Search_for_an_address                搜索地址
+12.Reverse_geocode                      反向地理編碼
+13.Find_places                          查找地點
+14.Find_a_route_and_directions          查找路線和方向
+15.Find_service_areas                   查找服務區域
+
+16.Query_demographic_data               查詢人口統計數據
+
+OpenLayer官方網址：https://openlayers.org/en/latest/examples/
+ArcGIS官方網址：https://developers.arcgis.com/openlayers/
+ArcGIS API JS:https://esri.github.io/arcgis-rest-js/api/

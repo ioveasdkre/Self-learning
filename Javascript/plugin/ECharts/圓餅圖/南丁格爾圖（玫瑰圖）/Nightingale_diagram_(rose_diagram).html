@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南丁格爾圖（玫瑰圖）</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 800px;height:600px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 圓餅圖
+                    type: 'pie',
+                    // 數據
+                    data: [
+                        {
+                            // 值
+                            value: 100,
+                            name: 'A'
+                        },
+                        {
+                            // 值
+                            value: 200,
+                            name: 'B'
+                        },
+                        {
+                            // 值
+                            value: 300,
+                            name: 'C'
+                        },
+                        {
+                            // 值
+                            value: 400,
+                            name: 'D'
+                        },
+                        {
+                            // 值
+                            value: 500,
+                            name: 'E'
+                        }
+                    ],
+                    // 是否展示成南丁格爾圖，通過半徑區分數據大小。可選擇兩種模式：
+                    // 'radius' 扇區圓心角展現數據的百分比，半徑展現數據的大小。
+                    // 'area' 所有扇區圓心角(角度)相同，僅通過半徑展現數據大小。
+                    // 玫瑰型:區域
+                    roseType: 'area'
+                }
+            ]
+        };
+        //#endregion
+
+        // 使用剛指定的配置項和數據顯示圖表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/pie/rose">官網範例連結</a>
+</body>
+
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖層控制</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="../OpenLayers_Kit/ol.css" type="text/css">
+    <!-- ol-ext 擴充套件 -->
+    <link rel="stylesheet" href="../css/ol-ext.css" type="text/css">
+    <!-- ol-ext擴充套件 -->
+    <link rel="stylesheet" href="../css/LayerSwitcher_popup.css" type="text/css">
+
+
+    <!-- OpenLayers Library -->
+    <script src="../OpenLayers_Kit/ol.js"></script>
+    <!-- jQuery_3.6.0.js -->
+    <script src="../js/jQuery_3.6.0.js"></script>
+    <!-- ol-ext擴充套件 -->
+    <script src="../js/ol-ext.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>圖層控制</h1>
+    <div id="map" class="map"></div>
+    <h4></h4>
+    <script>
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const baseMapTGOS = new ol.layer.Tile({
+            title: "BaseMapTGOS",
+            // 圖層的屬性管理圖層的獨占可見性（一次只顯示一個基礎圖層）。
+            baseLayer: true,
+            // Stamen 切片服務器的圖層源。
+            source: new ol.source.OSM({
+                maxZoom: 18
+            }),
+        });
+        
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const baseMapOSM = new ol.layer.Tile({
+            title: "BaseMapOSM",
+            // 圖層的屬性管理圖層的獨占可見性（一次只顯示一個基礎圖層）。
+            baseLayer: true,
+            // 能見度。
+            visible: false,
+            // Stamen 切片服務器的圖層源。
+            source: new ol.source.XYZ({
+                url: 'https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}',
+                // 最大縮放
+                maxZoom: 18,
+                // 可以放入版權資訊的字串，格式為 html
+                attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> '
+            })
+        });
+
+        // 圖層控制
+        // addControl 將給定的控件添加到地圖。
+        // ol.control.LayerSwitcher 層切換器控制。
+        const LSwitcher = new ol.control.LayerSwitcher({
+            // 添加範圍按鈕以縮放到圖層的範圍
+            extent: true,
+            // 允許層重新排序，默認為真
+            reordering: false,
+        });
+
+        // ol.control.Permalink 設置將用戶返回到當前地圖視圖的超鏈接。
+        const plink = new ol.control.Permalink({
+            // 隱藏地圖上的按鈕，默認為 true
+            visible: false,
+            // 將當前地圖視圖保存在 localStorage 中，如果 'position' 僅存儲地圖位置
+            //localStorage: 'position'
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const 登革熱病例數 = new ol.layer.Tile({
+            title: "登革熱病例數",
+            // 透明度
+            opacity: 0.7,
+            // 來源: 來自 WMTS服務器的切片數據的圖層源。
+            source: new ol.source.TileWMS({
+                // WMS 服務 URL。
+                url: 'http://map.eri.com.tw/geoserver/Ecolife/wms',
+                // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。
+                params: { 'LAYERS': 'Ecolife:CLDpoint0928', 'TRANSPARENT': true, 'TILED': true, 'FORMAT': 'image/png', 'VERSION': '1.1.0' },
+                // 可以放入版權資訊的字串，格式為 html
+                attributions: '登革熱病例數',
+                // 最大縮放
+                maxZoom: 20,
+                // WMS 服務器的類型
+                serverType: 'geoserver',
+            }),
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const 台南市村里界 = new ol.layer.Tile({
+            // 能見度。
+            visible: false,
+            title: "台南市村里界",
+            // 透明度
+            opacity: 0.7,
+            // 來源: 來自 WMTS服務器的切片數據的圖層源。
+            source: new ol.source.TileWMS({
+                // WMS 服務 URL。
+                url: 'http://map.eri.com.tw/geoserver/Ecolife/wms',
+                // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。
+                params: { 'LAYERS': 'Ecolife:TNVillage', 'TRANSPARENT': true, 'TILED': true, 'FORMAT': 'image/png', 'VERSION': '1.1.0' },
+                // 可以放入版權資訊的字串，格式為 html
+                attributions: '台南市村里界',
+                // 最大縮放
+                maxZoom: 20,
+                serverType: 'geoserver',
+            }),
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標系統:WGS84經緯度（全球性資料，如：GPS） ＝> EPSG:4326
+                projection: "EPSG:4326",
+                // 地圖中心地點:[經度,緯度]
+                center: [120.19661, 22.99158],
+                // 視圖縮放等級
+                zoom: 14
+            }),
+            // 最初添加到地圖的交互。: 默認情況下包含在地圖中的一組交互。
+            interactions: ol.interaction.defaults(),
+            // 最初添加到地圖的控件。:defaults 默認情況下包含在地圖中的一組控件。除非另有配置，否則這將返回一個包含以下每個控件的實例的集合：
+            // extend 將元素添加到集合中。這會將提供的數組中的每個項目推送到集合的末尾。
+            controls: ol.control.defaults().extend([
+                LSwitcher,
+                plink,
+            ]),
+            // 這裡是宣告圖層陣列
+            layers: [baseMapOSM, baseMapTGOS, 台南市村里界, 登革熱病例數]
+        });
+    </script>
+</body>
+
+</html>

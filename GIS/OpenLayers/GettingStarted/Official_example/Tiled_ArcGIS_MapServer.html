@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平鋪 ArcGIS MapServer</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>平鋪 ArcGIS MapServer</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>此示例說明如何將 ArcGIS REST MapService 用作切片。此源類型支持地圖和影像服務。對於緩存的 ArcGIS 服務，ol.source.XYZ改為使用可以獲得更好的性能。</h4>
+    <script>
+        // 地圖路徑
+        var url = 'https://sampleserver1.arcgisonline.com/ArcGIS/rest/services/' +
+            'Specialty/ESRI_StateCityHighway_USA/MapServer';
+
+        // 圖層陣列
+        var layers = [
+            // Tile = TileLayer
+            new ol.layer.Tile({
+                // 來源:OpenStreetMap 切片服務器的圖層源。
+                source: new ol.source.OSM()
+            }),
+            // Tile = TileLayer
+            new ol.layer.Tile({
+                // 圖層渲染的邊界範圍。該層將不會在此範圍之外渲染。
+                extent: [-13884991, 2870341, -7455066, 6338219],
+                // 來源:來自 ArcGIS Rest 服務的切片數據的圖層源。支持地圖和影像服務。
+                source: new ol.source.TileArcGISRest({
+                    // 地圖服務或影像服務的 ArcGIS Rest 服務 URL。url 應包括 /MapServer 或 /ImageServer。
+                    url: url
+                })
+            })
+        ];
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: layers,
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [-10997148, 4569099],
+                // 視圖縮放等級
+                zoom: 4
+            }),
+            // 最初添加到地圖的控件。
+            controls: ol.control.defaults({
+                // 來源選項
+                attributionOptions: {
+                    // 指定是否可以折疊來源(版權資訊)。
+                    collapsible: true
+                }
+            })
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/v4.6.5/examples/arcgis-tiled.html">官方範例</a>
+</body>
+
+</html>

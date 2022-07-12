@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>階梯線圖</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+</head>
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 800px;height:600px;"></div>
+  <script type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region 指定图表的配置项和数据
+    option = {
+        // X座標
+        xAxis: {
+            // 主座標
+            type: 'category',
+            // 數據
+            data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        },
+        // Y座標
+        yAxis: {
+            type: 'value'
+        },
+        // 系列設定（系列的資料）設定資料
+        series: [
+            {
+                name: 'Step Start',
+                type: 'line',
+                // 是否是階梯線圖。可以設置為 true 顯示成階梯線圖，也支持設置成 'start', 'middle', 'end' 分別配置在當前點，當前點與下個點的中間點，下個點拐彎。
+                // 當前點 先轉彎在至連結點
+                step: 'start',
+                // 數據
+                data: [120, 132, 101, 134, 90, 230, 210]
+            },
+            {
+                name: 'Step Middle',
+                type: 'line',
+                // 是否是階梯線圖。可以設置為 true 顯示成階梯線圖，也支持設置成 'start', 'middle', 'end' 分別配置在當前點，當前點與下個點的中間點，下個點拐彎。
+                // 當前點與下個點的中間點 中間點連結
+                step: 'middle',
+                // 數據
+                data: [220, 282, 201, 234, 290, 430, 410]
+            },
+            {
+                name: 'Step End',
+                type: 'line',
+                // 是否是階梯線圖。可以設置為 true 顯示成階梯線圖，也支持設置成 'start', 'middle', 'end' 分別配置在當前點，當前點與下個點的中間點，下個點拐彎。
+                // 下個點拐彎 先至連結點再轉彎
+                step: 'end',
+                // 數據
+                data: [450, 432, 401, 454, 590, 530, 510]
+            }
+        ]
+    };
+    //#endregion
+
+    // 使用剛指定的配置項和數據顯示圖表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/line/smooth-line">官網範例連結</a>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>非地理地圖(例：遊戲地圖)-CRS.Simple</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <!-- CRS.Simple -->
+    <!-- CRS代表坐標參考系統，地理學家用來解釋坐標在坐標向量中的含義的術語。例如，[15, 60]如果使用地球上的緯度-經度，或在我們的星圖中使用太陽系 Krueger-Z ，則表示印度洋中的一個點。 -->
+    <script>
+        // map('id') 地圖
+        // 設計一個籃子儲存地圖中心座標
+        var map = L.map('map', {
+            // 處裡圖像
+            crs: L.CRS.Simple
+        });
+
+        var bounds = [[0,0], [1000,1000]];
+        // imageOverlay('圖片網址', 圖像邊界) 載入本地圖片實現拖拽和縮放
+        var image = L.imageOverlay('img/uqm_map_full.png', bounds).addTo(map);
+
+        // fitbounds 動畫持續時間
+        map.fitBounds(bounds);
+    </script>
+    <a href="https://leafletjs.com/examples/crs-simple/crs-simple.html">官網範例連結</a>
+</body>
+</html>

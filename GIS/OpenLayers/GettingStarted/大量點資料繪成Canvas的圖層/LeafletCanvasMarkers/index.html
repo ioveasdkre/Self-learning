@@ -1,0 +1,271 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Test</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <link href="css/ol.css" rel="stylesheet" />
+
+    <!--alertifyjs 1.13.1 http://alertifyjs.com-->
+    <script src="alertify.js"></script>
+
+    <!--載入專案相關 js-->
+    <script src='project.min.js'></script>
+    <script src='coordTrans.js'></script>
+
+    <script src="js/ol.js"></script>
+    <script src="js/jQuery_3.6.0.js"></script>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .container {
+            margin: 0 auto;
+            max-width: 1200px;
+        }
+
+        .map {
+            z-index: 0;
+            width: 100%;
+            height: 600px;
+        }
+
+        .header {
+            padding-top: 50px;
+        }
+
+        /*.loading {
+            z-index: 100;
+            padding: 10px 10px 5px;
+            background: rgb(255, 0, 136);
+            left: 420px;
+            top: 150px;
+            color: #fff;
+            position: fixed;
+            width: 150px;
+            height: 30px;
+            text-align: center;
+            box-shadow: 2px 2px 10px;
+            border-radius: 5px;
+        }*/
+
+        .load {
+            position: fixed;
+            background: gray;
+            width: 100%;
+            height: 100vh;
+            z-index: 99999;
+            top: 0;
+            left: 0;
+        }
+
+
+        /*spin 1s linear infinite為一秒轉一圈  然後持續轉*/
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-radius: 70%;
+            border-top: 16px solid #3498db;
+            width: 100px;
+            height: 100px;
+            animation: spin 1s linear infinite;
+            position: relative;
+            top: 350px;
+            margin: auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Leaflet.canvas-icons</h1>
+        </div>
+        <div class="map" id="map"></div>
+    </div>
+    <!--<div id='loading' class="loading">正在載入頁面資料...</div>-->
+    <div class="load">
+        <div class="loader" />
+    </div>
+    <script>
+
+        // setView 使用給定的動畫選項設置地圖視圖（地理中心和縮放）。
+        var map = L.map('map').setView([25.066284, 121.53772], 13);
+        //載入TGOS的台灣底圖
+        var baseMapTGOS = L.tileLayer('http://maps.nlsc.gov.tw/S_Maps/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=EMAP&STYLE=_null&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2Fpng', {
+            // 最大縮放
+            maxZoom: 18
+
+        }).addTo(map);
+
+        //leaflet-canvas-marker Canvas圖層
+        // 建立canvasIconLayer圖層，把圖層新增到地圖，給圖層新增圖片標記。
+        var ciLayer = L.canvasIconLayer({}).addTo(map);
+
+        // icon({設定路徑大小位置}) 圖標
+        var icon = L.icon({
+            // 網址或圖片路徑
+            iconUrl: 'img/pothole.png',
+            // 圖片大小
+            iconSize: [20, 18],
+            // 圖片位置
+            iconAnchor: [10, 9]
+        });
+
+
+        var Config = {
+            /**
+             * 資料查詢呼叫
+             * @param {string} func 呼叫方法
+             * @param {any} dat 傳送資料
+             * @param {Function} callback 回傳成功處理函式
+             * @returns {any} self
+             */
+            AjaxCall: function (func, dat, callback) {
+                var me = this;
+                var ajax_type = "POST";
+                var ajax_url = "";
+                var ajax_contentType = "application/json; charset=utf-8";
+                var ajax_dataType = "json";
+                var ajax_data = JSON.stringify(dat);
+
+                switch (func) {
+                    case "GetPullution":
+                        ajax_url = "myData.asmx/GetPullution";
+                        ajax_data = "";
+                        break;
+                    case "GetPullutionTM2":
+                        ajax_url = "myData.asmx/GetPullutionTM2";
+                        ajax_data = "";
+                        break;
+                    default:
+                        break;
+                }
+
+                $.ajax({
+                    // 請求資料的方式
+                    method: ajax_type,
+                    // 網址
+                    url: ajax_url,
+                    // 請求資料內容的類型
+                    contentType: ajax_contentType,
+                    // 非同步
+                    async: true,//若需要使用ajax取得的result的數值，必須設定為false(才會變成sync同步執行）
+                    // cache作用：是否從快取(暫存)中做資料的讀取
+                    //  cache屬性是  true（預設值）：
+                    // 在首次請求完成之後，如果地址和引數不變化，第二次去請求，會優先預設獲取快取中的資料，不會讀伺服器返回的新資料。
+                    // cache屬性是  false  時：每次讀取的是最新的伺服器返回資料。
+                    cache: false,
+                    // 數據類型
+                    dataType: ajax_dataType,
+                    // 數據
+                    data: ajax_data
+                })
+                    // done(相當於 success 成功) 回調
+                    .done(function (data) {
+                        // hasOwnProperty 回傳物件是否有該屬性的布林值。
+                        const result = data.hasOwnProperty('d') ? data.d : data;
+                        if (!result) {
+                            // 跳出提示視窗
+                            window.alertify.notify(`服務呼叫異常..(${func})`, "error", 2);
+                            return;
+                        }
+
+                        // 判斷 callback是否存在
+                        if (callback) {
+                            // callback執行完後，執行 data
+                            callback(data);
+                        }
+                    })
+                    // 相當於error方法。
+                    .fail(function () {
+                        // 跳出提示視窗
+                        window.alertify.notify(`服務呼叫異常..(${func})`, "error", 2);
+                    })
+                    // 無論成功與失敗皆會執行，相當於 complete。(例如:ajax.always)
+                    .always(function () {
+                        // 移除 Class
+                        $('#LoadingOverlay').removeClass('show');
+                        // typeof檢驗運算元所代表的型別
+                        if (typeof $.LoadingOverlay !== 'undefined') {
+                            // 設定全螢幕遮罩(顯示或隱藏)。
+                            $.LoadingOverlay("hide");
+                        }
+                    });
+
+                return this;
+            }
+        };
+
+        window.onload = function () {   //在讀取時顯示  下方秒數為至少顯示這麼久 但還是要等整個網頁讀取完成才會結束
+            // 顯示
+            $(".load").show();
+        };
+
+        var markers = [];
+        var me = this;
+        var pageCnd = {};
+        (function () {
+
+            // 讀取 ajax
+            Config.AjaxCall("GetPullution", pageCnd, function (result) {
+                var features = [];
+                // 轉成 json物件
+                // result.d 微軟框架默認返回一個  { "d": "後臺返回的數據" }，例如；data.d
+                var returnData = JSON.parse(result.d);
+                returnData.forEach(function (item) {
+                    //var point = project.Actions.UTM2LatLon(item.x, item.y, 0, 0);
+                    //var marker = L.marker([point.y, point.x], { icon: icon }).bindPopup("ID:" + item.i);
+
+                    // marker([地理坐標]) 標記符號(地圖上標記符號)
+                    // icon({設定路徑大小位置}) 圖標
+                    // bindPopup 點擊彈出視窗
+                    var marker = L.marker([item.y, item.x], { icon: icon }).bindPopup("ID:" + item.i);
+                    markers.push(marker);
+
+                });
+                // 添加圖層
+                ciLayer.addLayers(markers);
+                // 隱藏
+                $('.load').hide();
+            });
+
+            //上下的效能差了15秒左右
+            /*
+            Config.AjaxCall("GetPullutionTM2", pageCnd, function (result) {
+                var features = [];
+                var returnData = JSON.parse(result.d);
+                returnData.forEach(function (item) {
+                    var point = project.Actions.UTM2LatLon(item.x, item.y, 0, 0);
+                    var marker = L.marker([point.y, point.x], { icon: icon }).bindPopup("ID:" + item.i);
+                    //var marker = L.marker([item.y, item.x], { icon: icon }).bindPopup("ID:" + item.i);
+                    markers.push(marker);
+
+                });
+                ciLayer.addLayers(markers);
+                $('.load').hide();
+            });
+            */
+        })();
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖層切換器彈出窗口</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- jQuery_3.6.0.js -->
+    <script src="js/jQuery_3.6.0.js"></script>
+    <!-- ol-ext 擴充套件 -->
+    <link rel="stylesheet" href="css/ol-ext.css" type="text/css">
+    <script src="js/ol-ext.js"></script>
+    <!-- 自訂 css -->
+    <link rel="stylesheet" href="css/LayerSwitcher_popup.css" type="text/css">
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>圖層切換器彈出窗口</h1>
+
+    <div class="info">
+        向地圖添加一個簡單的彈出式圖層切換器。 在彈出窗口中僅啟用第一級。
+        <ul>
+            <li>
+                <i>title</i> 或 <i>name</i> 圖層的屬性用於命名切換器中的 ol.layer。
+            </li>
+            <li>
+                它使用 <i>圖層切換器</i> 圖層的屬性使其不在 LayerSwitcher 中顯示。
+            </li>
+            <li>
+                <i>baseLayer</i>圖層的屬性管理圖層的獨占可見性（一次只顯示一個基礎圖層）。
+            </li>
+        </ul>
+    </div>
+
+    <div id="map" class="map"></div>
+    <h4>如果使用 VS Code請開啟 Open With Live Server查看此範例</h4>
+    <script type="text/javascript">
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        var stamen = new ol.layer.Tile({
+            title: "Watercolor",
+            // 圖層的屬性管理圖層的獨占可見性（一次只顯示一個基礎圖層）。
+            baseLayer: true,
+            // Stamen 切片服務器的圖層源。
+            source: new ol.source.Stamen({
+                // 圖層名稱。
+                layer: 'watercolor'
+            })
+        });
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        var stamen2 = new ol.layer.Tile({
+            title: "Toner",
+            // 圖層的屬性管理圖層的獨占可見性（一次只顯示一個基礎圖層）。
+            baseLayer: true,
+            // 能見度。
+            visible: false,
+            // Stamen 切片服務器的圖層源。
+            source: new ol.source.Stamen({
+                // 圖層名稱。
+                layer: 'toner'
+            })
+        });
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        var osm = new ol.layer.Tile({
+            title: "OSM",
+            // 圖層的屬性管理圖層的獨占可見性（一次只顯示一個基礎圖層）。
+            baseLayer: true,
+            // Stamen 切片服務器的圖層源。
+            source: new ol.source.OSM(),
+            // 能見度。
+            visible: false
+        });
+
+        // 具有預覽屬性的 GeoJSON 圖層
+        // ol.source.Vector 為矢量圖層提供特徵源。
+        var vectorSource = new ol.source.Vector({
+            // 路徑
+            url: 'data/fond_guerre.geojson',
+            // 座標系統
+            projection: 'EPSG:3857',
+            // XHR 功能加載器在 url設置時使用的功能格式。如果url設置，則為必需，否則忽略。
+            format: new ol.format.GeoJSON(),
+            // 版權聲明
+            attributions: ["&copy; <a href='https://data.culture.gouv.fr/explore/dataset/fonds-de-la-guerre-14-18-extrait-de-la-base-memoire'>data.culture.gouv.fr</a>"],
+            // 標誌
+            logo: "https://www.data.gouv.fr/s/avatars/37/e56718abd4465985ddde68b33be1ef.jpg"
+        });
+
+        // 在客戶端呈現的矢量數據。
+        var vector = new ol.layer.Vector({
+            name: '1914-18',
+            // 預覽
+            preview: "http://www.culture.gouv.fr/Wave/image/memoire/2445/sap40_z0004141_v.jpg",
+            // 來源
+            source: vectorSource
+        });
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View
+                ({
+                    // 視圖縮放等級
+                    zoom: 6,
+                    // 地圖中心地點:[經度,緯度]
+                    center: [173664, 6166327]
+                }),
+            // 最初添加到地圖的控件。:defaults 默認情況下包含在地圖中的一組控件。除非另有配置，否則這將返回一個包含以下每個控件的實例的集合：
+            // extend 將元素添加到集合中。這會將提供的數組中的每個項目推送到集合的末尾。
+            controls: ol.control.defaults().extend
+                // 圖層彈出視窗
+                ([new ol.control.LayerPopup(),
+                ]),
+            // 這裡是宣告圖層陣列
+            layers: [stamen, stamen2, osm, vector]
+        });
+    </script>
+    <br><a href="https://viglino.github.io/ol-ext/examples/control/map.switcher.popup.html">官方範例</a>
+</body>
+
+</html>

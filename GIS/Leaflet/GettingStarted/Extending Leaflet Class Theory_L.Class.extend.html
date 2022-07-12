@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴展單張：階級理論-L.Class.extend()</title>
+    
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 100vw;
+        height: 100%;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <script>
+        var bounds = [[0,0], [1570,1910]];
+
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 處裡圖像
+            crs: L.CRS.Simple,
+            // 最大縮放
+            maxZoom: 0,
+            // 最小縮放
+            minZoom: -4,
+            // 最大邊界
+            maxBounds: bounds
+        });
+
+        var image = L.imageOverlay('img/class-diagram.png', bounds).addTo(map);
+
+        map.fitBounds(bounds);
+    </script>
+
+    <!-- L.Class.extend() -->
+    <!-- 要在 Leaflet 中創建任何內容的子類，請使用該.extend()方法。這接受一個參數：一個帶有鍵值對的普通對象，每個鍵是屬性或方法的名稱，每個值是屬性的初始值或方法的實現： -->
+    <script>
+        // L.Class.extend 建構 class
+        var MyDemoClass = L.Class.extend({
+
+            // 鍵 : 值
+            myDemoProperty: 42,   
+
+            // 鍵 : 方法
+            myDemoMethod: function() { return this.myDemoProperty; }
+
+        });
+
+        // 產生一個具有 MyDemoClass()特性的物件
+        var myDemoInstance = new MyDemoClass();
+
+        // 該console.log()方法向 Web 控制台輸出一條消息。消息可以是單個字符串（帶有可選的替換值），也可以是任何一個或多個 JavaScript 對象。
+        // console.log() 將 ()內的值輸出到開發控制台
+        console.log("L.Class.extend() 創建 class"); // 42
+        console.log(myDemoInstance.myDemoMethod() + " 呼叫自訂的方法"); // 42
+    </script>
+
+    <!-- L.Class.include() -->
+    <!-- 如果已經定義了一個類，則可以重新定義現有的屬性/方法，或者可以使用.include()以下方法添加新的屬性/方法： -->
+    <script>
+        // L.Class.include calss重新定義現有的屬性/方法 or 添加新的屬性/方法
+        MyDemoClass.include({
+
+            // 鍵 : 值
+            _myPrivateProperty: 78,
+
+            // 鍵 : 方法
+            myDemoMethod: function() { return this._myPrivateProperty; }
+
+        });
+
+        var mySecondDemoInstance = new MyDemoClass();
+
+        // 該console.log()方法向 Web 控制台輸出一條消息。消息可以是單個字符串（帶有可選的替換值），也可以是任何一個或多個 JavaScript 對象。
+        // console.log() 將 ()內的值輸出到開發控制台
+        console.log("L.Class.include() 重新定義現有的屬性/方法 or 添加新的屬性/方法");
+        console.log(mySecondDemoInstance.myDemoMethod() + " 呼叫重新定義的方法"); // 78
+
+        console.log(mySecondDemoInstance.myDemoProperty + " 呼叫 myDemoProperty的值"); // 42
+    </script>
+
+    <!-- L.Class.initialize() -->
+    <!-- 在 OOP 中，類有一個構造函數方法。在 Leaflet 中L.Class，構造函數方法總是被命名為initialize。
+
+    如果您的類有一些特定的options，最好L.setOptions()在構造函數中初始化它們。此實用程序函數會將提供的選項與類的默認選項合併。 -->
+    <script>
+        // L.Class.extend 建構 class
+        var MyBoxClass = L.Class.extend({
+
+            // 自訂變數: {鍵 : 值}
+            options: {
+                width: 1,
+                height: 1
+            },
+
+            // 鍵 : 方法
+            // initialize 此實用程序函數會將提供的選項與類的默認選項合併。
+            initialize: function(name, options) {
+                this.name = name;
+                // setOptions 構造函數中初始化(可被覆寫)
+                L.setOptions(this, options);
+            }
+
+        });
+
+        var instance = new MyBoxClass('Red', {width: 10});
+
+        // 該console.log()方法向 Web 控制台輸出一條消息。消息可以是單個字符串（帶有可選的替換值），也可以是任何一個或多個 JavaScript 對象。
+        // console.log() 將 ()內的值輸出到開發控制台
+        console.log("L.Class.initialize() 此實用程序函數會將提供的選項與類的默認選項合併。"); // Red
+        console.log("使用 this(傳入的值) " +instance.name); // Red
+        console.log("複寫 options.width的值(原本為 1)" + instance.options.width); // 10
+        console.log("呼叫初始化 options.height的值 " + instance.options.height); // 1
+    </script>
+
+    <!-- Leafletoptions以一種特殊的方式處理屬性：父類可用的選項將被子類繼承：。 -->
+    <!-- 因以使用 initialize 此實用程序函數會將提供的選項與類的默認選項合併。再次給同樣的 class物件 鍵 : 方法可合併 -->
+    <script>
+        // L.Class.extend 建構 class
+        var MyCubeClass = MyBoxClass.extend({
+            options: {
+                depth: 1
+            }
+        });
+
+        var instance = new MyCubeClass('Blue');
+
+        // 該console.log()方法向 Web 控制台輸出一條消息。消息可以是單個字符串（帶有可選的替換值），也可以是任何一個或多個 JavaScript 對象。
+        // console.log() 將 ()內的值輸出到開發控制台
+        console.log("父與子合併");
+        console.log("父類別默認 " + instance.options.width); // 1 父類別默認
+        console.log("父類別默認 " + instance.options.height); // 1 父類別默認
+        console.log("子類別 " + instance.options.depth); // 1
+    </script>
+
+    <!-- 子類運行父類的構造函數，然後運行它們自己的構造函數是很常見的。在 Leaflet 中，這是使用L.Class.addInitHook(). 此方法可用於“掛鉤”緊接在 class' 之後運行的初始化函數，initialize()例如： -->
+    <script>
+        // addInitHook 附加在父類別底下
+        MyBoxClass.addInitHook(function(){
+            this._area = this.options.width * this.options.length;
+        });
+    </script>
+
+    <!-- 這將在initialize()被調用（調用setOptions()）之後運行。這意味著this.options存在並且在 init 鉤子運行時有效。
+
+    addInitHook 有一個替代語法，它使用方法名稱並且可以在以下位置填充方法參數： -->
+    <script>
+        // L.Class.include calss重新定義現有的屬性/方法 or 添加新的屬性/方法
+        MyCubeClass.include({
+            _calculateVolume: function(arg1, arg2) {
+                this._volume = this.options.width * this.options.length * this.options.depth;
+            }
+        });
+
+        // 在構造函數中額外做一些事情
+        // 例如 添加事件偵聽器，設置自定義屬性等
+        MyCubeClass.addInitHook('_calculateVolume', 10, 20);
+    </script>
+
+    <!-- 父類的方法 -->
+    <!-- 調用父類的方法是通過進入父類的原型並使用Function.call(…). 例如，這可以在以下代碼中看到L.FeatureGroup： -->
+    <script>
+        // L.LayerGroup.extend 調用父類的方法
+        // 以類似的方式調用父類的構造函數，但使用ParentClass.prototype.initialize.call(this, …)代替。
+        L.FeatureGroup = L.LayerGroup.extend({
+
+            addLayer: function (layer) {
+                L.LayerGroup.prototype.addLayer.call(this, layer);
+            },
+
+            removeLayer: function (layer) {
+                L.LayerGroup.prototype.removeLayer.call(this, layer);
+            }
+        });
+    </script>
+
+    <!-- 工廠函數 -->
+    <!-- 大多數 Leaflet 類都有相應的工廠函數。工廠函數與類同名，但lowerCamelCase不是UpperCamelCase： -->
+    <script>
+        // 方法和類別同名 大小寫不同 就不一樣
+        function myBoxClass(name, options) {
+            return new MyBoxClass(name, options);
+        }
+    </script>
+
+    <!-- 命名約定 -->
+    <!-- 在為 Leaflet 插件命名類時，請遵守以下命名約定： -->
+    <!-- 永遠不要在你的插件中暴露全局變量。
+    如果你有一個新類，直接把它放在L命名空間 ( L.MyPlugin) 中。
+    如果您繼承現有類之一，請將其設為子屬性 ( L.TileLayer.Banana)。 -->
+
+    <script>
+        var marker = L.marker([0, 0]).addTo(map);
+        marker.bindPopup("<a href='https://leafletjs.com/examples/extending/extending-1-classes.html'>官網範例連結</a>")
+    </script>
+</body>
+</html>

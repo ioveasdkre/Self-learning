@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>更改底圖圖層</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+    #basemaps-wrapper {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+    #basemaps {
+        padding: 4px 8px;
+        font-size: 16px;
+    }
+</style>
+<body>
+    <h1>更改底圖圖層</h1>
+    <h4>了解如何更改底圖圖層在一個地圖.</h4>
+    <div id="map" class="map"></div>
+    <div id="basemaps-wrapper">
+        <select id="basemaps">
+            <option value="ArcGIS:Streets">Streets</option>
+            <option value="ArcGIS:Navigation">Navigation</option>
+            <option value="ArcGIS:Topographic">Topographic</option>
+            <option value="ArcGIS:LightGray">Light Gray</option>
+            <option value="ArcGIS:DarkGray">Dark gray</option>
+            <option value="ArcGIS:StreetsRelief">Streets Relief</option>
+            <option value="ArcGIS:Imagery:Standard">Imagery</option>
+            <option value="ArcGIS:ChartedTerritory">ChartedTerritory</option>
+            <option value="ArcGIS:ColoredPencil">ColoredPencil</option>
+            <option value="ArcGIS:Nova">Nova</option>
+            <option value="ArcGIS:Midcentury">Midcentury</option>
+            <option value="OSM:Standard">OSM</option>
+            <option value="OSM:Streets">OSM:Streets</option>
+        </select>
+    </div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>這底圖圖層服務提供了一些可在地圖中使用的底圖圖層樣式，例如地形、街道和影像。</h4>
+    <script>
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-118.805, 34.027]),
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+        
+        // ArcGIS Url
+        const baseUrl = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles";
+        // 設定 url更換圖層
+        const url = (name) => `${baseUrl}/${name}?type=style&token=${apiKey}`;
+
+        // 自訂方法更換圖層
+        const setBasemap = (name) => {
+            // 清除現有圖層。
+            map.setLayerGroup(new ol.layer.Group());
+
+            // 實例化給定的底圖圖層。
+            olms(map, url(name));
+        };
+            
+        // 設定底圖
+        setBasemap("ArcGIS:Streets");
+
+        // 抓取下拉式選單
+        const basemapsSelectElement = document.querySelector("#basemaps");
+
+        // change 發生變化時
+        // addEventListener 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        basemapsSelectElement.addEventListener("change", (e) => {
+            // 抓取下搭式選單的值
+            setBasemap(e.target.value);
+        });
+
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/maps/change-the-basemap-layer/">官方範例</a>
+</body>
+</html>

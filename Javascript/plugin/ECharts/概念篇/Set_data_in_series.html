@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在系列中設置數據</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        // 指定图表的配置项和数据
+        option = {
+            // 提示設定（滑鼠懸浮到圖上的互動樣式） 顯示 series或 dataset設定的內容
+            tooltip: {},
+            // X軸
+            xAxis: {
+                // category主座標
+                type: 'category',
+                data: ['Matcha Latte', 'Milk Tea', 'Cheese Cocoa', 'Walnut Brownie']
+            },
+            // 設定 Y軸
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 柱狀圖
+                    type: 'bar',
+                    name: '2015',
+                    data: [89.3, 92.1, 94.4, 85.4]
+                },
+                {
+                    type: 'bar',
+                    name: '2016',
+                    data: [95.8, 89.4, 91.2, 76.9]
+                },
+                {
+                    type: 'bar',
+                    name: '2017',
+                    data: [97.7, 83.1, 92.5, 78.1]
+                }
+            ]
+        };
+
+        option2 = {
+            // X軸
+            xAxis: {
+                // category主座標
+                type: 'category',
+                data: ['Matcha Latte', 'Milk Tea', 'Cheese Cocoa', 'Walnut Brownie']
+            },
+            // 設定 Y軸
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 柱狀圖
+                    type: 'bar',
+                    name: '2015',
+                    data: [89.3, 92.1, 94.4, 85.4]
+                },
+                {
+                    type: 'bar',
+                    name: '2016',
+                    data: [95.8, 89.4, 91.2, 76.9]
+                },
+                {
+                    type: 'bar',
+                    name: '2017',
+                    data: [97.7, 83.1, 92.5, 78.1]
+                }
+            ]
+        };
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/concepts/dataset">官網範例連結</a>
+</body>
+
+</html>

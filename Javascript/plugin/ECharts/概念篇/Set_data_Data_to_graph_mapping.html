@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据到图形的映射（ series.encode ）</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 1200px;height:800px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        // 指定图表的配置项和数据
+        var option = {
+            // 數據
+            dataset: {
+                // 提供一份数据。
+                source: [
+                    // 第一行設定為 說明，以下則為數據
+                    ['score', 'amount', 'product'],
+                    [89.3, 58212, 'Matcha Latte'],
+                    [57.1, 78254, 'Milk Tea'],
+                    [74.4, 41032, 'Cheese Cocoa'],
+                    [50.1, 12755, 'Cheese Brownie'],
+                    [89.7, 20145, 'Matcha Cocoa'],
+                    [68.1, 79146, 'Tea'],
+                    [19.6, 91852, 'Orange Juice'],
+                    [10.6, 101852, 'Lemon Juice'],
+                    [32.7, 20112, 'Walnut Brownie']
+                ]
+            },
+            // 声明一个 X 轴，类目轴（category）。默认情况下，类目轴对应到 dataset 第一列。
+            xAxis: {},
+            // 声明一个 Y 轴，数值轴。
+            // category主座標
+            yAxis: { type: 'category' },
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 柱狀圖
+                    type: 'bar',
+                    // dataset-source 第一行 key:value 第一行:第一行之後的資料
+                    encode: {
+                        // 将 "amount" 列映射到 X 轴。
+                        x: 'amount',
+                        // 将 "product" 列映射到 Y 轴。
+                        y: 'product'
+                    }
+                }
+            ]
+        };
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/concepts/dataset">官網範例連結</a>
+</body>
+
+</html>

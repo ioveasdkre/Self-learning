@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖標顏色</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+    
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>圖標顏色</h1>
+    <div id="map" class="map"></div>
+    <h4>為圖標分配自定義顏色的示例。此示例中的圖標樣式使用帶有白色填充的圖像。對於某些功能，使用color屬性設置自定義顏色。請注意，圖標文件需要遵守同源策略或發送適當的 CORS 標頭才能使其正常工作。依賴 CORS
+        標頭時，ol/style/Icon必須使用crossOrigin: 'anonymous'.</h4>
+    <script>
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const rome = new ol.Feature({
+            // ol.geom.Point 點幾何。
+            // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+            geometry: new ol.geom.Point(ol.proj.fromLonLat([12.5, 41.9]))
+        });
+
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const london = new ol.Feature({
+            // ol.geom.Point 點幾何。
+            // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+            geometry: new ol.geom.Point(ol.proj.fromLonLat([-0.12755, 51.507222]))
+        });
+
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const paris = new ol.Feature({
+            // ol.geom.Point 點幾何。
+            // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+            geometry: new ol.geom.Point(ol.proj.fromLonLat([2.353, 48.8566])),
+        });
+
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const berlin = new ol.Feature({
+            // ol.geom.Point 點幾何。
+            // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+            geometry: new ol.geom.Point(ol.proj.fromLonLat([13.3884, 52.5169])),
+        });
+
+        // setStyle 設置要素的樣式以覆蓋圖層樣式。
+        // ol.style.Style 設定風格
+        rome.setStyle(new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 為圖標著色的顏色。
+                color: '#BADA55',
+                // crossOrigin加載圖像的屬性。
+                crossOrigin: 'anonymous',
+                // 圖像大小（以像素為單位）。
+                imgSize: [20, 20],
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/dot.png'
+            })
+        }));
+
+        // setStyle 設置要素的樣式以覆蓋圖層樣式。
+        // ol.style.Style 設定風格
+        london.setStyle(new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 為圖標著色的顏色。
+                color: 'rgba(255, 0, 0, .5)',
+                // crossOrigin加載圖像的屬性。
+                crossOrigin: 'anonymous',
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/dot.png',
+                // 比例。
+                scale: 0.5
+            })
+        }));
+
+        // setStyle 設置要素的樣式以覆蓋圖層樣式。
+        // ol.style.Style 設定風格
+        paris.setStyle(new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 為圖標著色的顏色。
+                color: '#8959A8',
+                // crossOrigin加載圖像的屬性。
+                crossOrigin: 'anonymous',
+                // 圖像大小（以像素為單位）。
+                imgSize: [20, 20],
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/dot.png'
+            })
+        }));
+
+        // setStyle 設置要素的樣式以覆蓋圖層樣式。
+        // ol.style.Style 設定風格
+        berlin.setStyle(new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // crossOrigin加載圖像的屬性。
+                crossOrigin: 'anonymous',
+                // 圖像大小（以像素為單位）。
+                imgSize: [20, 20],
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/dot.png'
+            })
+        }));
+
+        // 為矢量圖層提供特徵源。
+        const vectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [rome, london, paris, berlin]
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vectorLayer = new ol.layer.Vector({
+            // 來源。
+            source: vectorSource
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const rasterLayer = new ol.layer.Tile({
+            // 來源。:TileJSON 格式的圖塊數據的圖層源。
+            source: new ol.source.TileJSON({
+                // TileJSON 文件的 URL。
+                url: 'https://a.tiles.mapbox.com/v3/aj.1x1-degrees.json?secure=1',
+                // crossOrigin加載圖像的屬性。
+                crossOrigin: ''
+            })
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [rasterLayer, vectorLayer],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // center 地圖中心地點:[經度,緯度]
+                // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([2.896372, 44.60240]),
+                // 視圖縮放等級
+                zoom: 3
+            })
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/icon-color.html">官方範例</a>
+</body>
+
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>繪製和修改測地線圓(線上繪畫工具)</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="../OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="../OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>繪製和修改測地線圓(線上繪畫工具)</h1>
+    <div id="map" class="map"></div>
+    <form class="form-inline">
+        <label for="type">幾何類型 &nbsp;</label>
+        <select id="type">
+            <option value="Point">點</option>
+            <option value="LineString">折線</option>
+            <option value="Polygon">多邊形</option>
+            <option value="Circle">圓形幾何</option>
+            <option value="Geodesic" selected>測地線</option>
+        </select>
+    </form>
+    <h4>使用 ol/interaction/Draw與自定義幾何函數的
+        ol/interaction/Modify交互以及交互來繪製和修改測地線圓（ol/geom/Polygon#circular表示地球球體表面上的圓的多邊形）的示例。多邊形
+        ol/geom/GeometryCollection與a一起放置 ol/geom/Point，允許修改交互調整圓心和半徑。自定義樣式函數可確保始終顯示正確的最終幾何圖形。
+        ol/geom/Circle還可以繪製和修改投影（平面）幾何圖形。當測地線和投影圓的中心在 Web墨卡托投影中的北緯和南緯之間移動時，可以看出它們之間的差異。該
+        ol/interaction/Snap相互作用可用於創建同心圓。</h4>
+    <script>
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const raster = new ol.layer.Tile({
+            // 來源:OpenStreetMap 切片服務器的圖層源。
+            source: new ol.source.OSM(),
+        });
+
+        // 為矢量圖層(geojson)提供特徵源。
+        const source = new ol.source.Vector();
+
+        // Circle圓形幾何
+        // 設定風格
+        const style = new ol.style.Style({
+            // 設置矢量特徵(geojson)的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(255, 255, 255, 0.2)', // 白色
+            }),
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: '#33cc33', // 綠色
+                // 邊線寬度
+                width: 2,
+            }),
+            // 圖像風格。:為矢量特徵設置圓形樣式。
+            image: new ol.style.Circle({
+                // 圓半徑。
+                radius: 7,
+                // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+                fill: new ol.style.Fill({
+                    // 填滿
+                    color: '#ffcc33', // 黃色
+                }),
+            }),
+        });
+
+        // Geodesic測地線樣式
+        // 設定風格
+        const geodesicStyle = new ol.style.Style({
+            // 特徵屬性或幾何體或函數返回要為此樣式渲染的幾何體。
+            geometry: function (feature) {
+                // get(key)獲取一個值。
+                // getGeometry 返回將使用此樣式呈現的幾何圖形的特徵屬性或幾何圖形或函數。
+                return feature.get('modifyGeometry') || feature.getGeometry();
+            },
+            // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(255, 255, 255, 0.2)', // 白色
+            }),
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                color: '#ff3333', // 紅色
+                // 邊線寬度
+                width: 2,
+            }),
+            // 圖像風格。:為矢量特徵設置圓形樣式。
+            image: new ol.style.Circle({
+                // 半徑。
+                radius: 7,
+                // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+                fill: new ol.style.Fill({
+                    // 填滿
+                    color: 'rgba(0, 0, 0, 0)',
+                }),
+            }),
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vector = new ol.layer.Vector({
+            // 來源:
+            source: source,
+            // 設定風格
+            style: function (feature) {
+                // 獲取特徵默認幾何的名稱。
+                const geometry = feature.getGeometry();
+                // getType 抓取 幾何類型。
+                // GeometryCollection 幾何集合
+                return geometry.getType() === 'GeometryCollection' ? geodesicStyle : style;
+            },
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [raster, vector],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標
+                center: [-11000000, 6600000],
+                // 視圖縮放等級
+                zoom: 3,
+            }),
+        });
+
+        // 用於修改特徵幾何的交互。要修改已添加到現有源的要素，請使用該source選項構建修改交互 。如果要修改集合中的要素（例如，選擇交互使用的集合），請使用features選項構造交互。交互必須由 a source或featuresoption 構成。
+        const defaultStyle = new ol.interaction.Modify({
+            // 具有要修改的特徵的矢量源。
+            source: source
+        })
+            // 獲取此交互將修改點或頂點渲染到的疊加層。
+            .getOverlay()
+            // 獲取樣式函數，返回圖層樣式功能。
+            .getStyleFunction();
+
+        // 交互以及交互來繪製和修改測地線圓(多邊形)
+        // ol.interaction.Modify 用於修改特徵幾何的交互。要修改已添加到現有源的要素，請使用該source選項構建修改交互 。如果要修改集合中的要素（例如，選擇交互使用的集合），請使用features選項構造交互。交互必須由 a source或featuresoption 構成。
+        const modify = new ol.interaction.Modify({
+            // 具有要修改的特徵的矢量源。
+            source: source,
+            // 設定風格
+            style: function (feature) {
+                // get(key)獲取一個值。
+                // features 特徵
+                feature.get('features').forEach(function (modifyFeature) {
+                    // get(key)獲取一個值。
+                    // modifyGeometry 修改幾何
+                    const modifyGeometry = modifyFeature.get('modifyGeometry');
+                    if (modifyGeometry) {
+                        // getGeometry 獲取特徵的默認幾何。一個要素可以有任意數量的命名幾何。
+                        // getCoordinates 獲取座標
+                        const modifyPoint = feature.getGeometry().getCoordinates();
+                        // getGeometry 獲取特徵的默認幾何。一個要素可以有任意數量的命名幾何。
+                        // getGeometries 返回構成此幾何集合的幾何圖形。
+                        const geometries = modifyFeature.getGeometry().getGeometries();
+                        // 多邊形 = getCoordinates 獲取座標
+                        const polygon = geometries[0].getCoordinates()[0];
+                        // 中心點 = getCoordinates 獲取座標
+                        const center = geometries[1].getCoordinates();
+                        // getView 獲取與此地圖關聯的視圖。視圖管理諸如中心和分辨率之類的屬性。
+                        // getProjection 獲取視圖投影。
+                        const projection = map.getView().getProjection();
+                        // 第一筆, 持續, 半徑
+                        let first, last, radius;
+                        if (modifyPoint[0] === center[0] && modifyPoint[1] === center[1]) {
+                            // 中心正在修改從多邊形頂點之間的直徑獲得不變的半徑
+                            // transform 將幾何體的每個坐標從一個坐標參考系統轉換為另一個。
+                            first = transform(polygon[0], projection, 'EPSG:4326');
+                            last = transform(
+                                polygon[(polygon.length - 1) / 2],
+                                projection,
+                                'EPSG:4326'
+                            );
+                            // 獲取簇之間的像素距離。
+                            radius = getDistance(first, last) / 2;
+                        } else {
+                            // 正在修改半徑
+                            // transform 將幾何體的每個坐標從一個坐標參考系統轉換為另一個。
+                            first = transform(center, projection, 'EPSG:4326');
+                            // transform 將幾何體的每個坐標從一個坐標參考系統轉換為另一個。
+                            last = transform(modifyPoint, projection, 'EPSG:4326');
+                            // 獲取簇之間的像素距離。
+                            radius = getDistance(first, last);
+                        }
+                        // 使用新的中心或半徑更新多邊形
+                        // circular（中心，半徑，多邊形數量，球體的半徑）(註:參數3 4可選) “圓形”多邊形。
+                        // transform 將幾何體的每個坐標從一個坐標參考系統轉換為另一個。
+                        const circle = circular(
+                            transform(center, projection, 'EPSG:4326'),
+                            radius,
+                            128
+                        );
+                        // transform 將幾何體的每個坐標從一個坐標參考系統轉換為另一個。
+                        circle.transform('EPSG:4326', projection);
+                        // setCoordinates 設置多邊形的坐標。
+                        // getCoordinates 獲取此幾何的坐標數組。該數組具有多邊形的 GeoJSON 坐標數組的結構。
+                        geometries[0].setCoordinates(circle.getCoordinates());
+                        // 保存要在交互結束時應用的更改
+                        modifyGeometry.setGeometries(geometries);
+                    }
+                });
+                return defaultStyle(feature);
+            },
+        });
+
+        // modifystart 修改開始
+        modify.on('modifystart', function (event) {
+            // 獲取特徵
+            event.features.forEach(function (feature) {
+                // 獲取特徵的默認幾何。一個要素可以有任意數量的命名幾何。
+                const geometry = feature.getGeometry();
+                // getType 抓取 幾何類型。
+                // GeometryCollection 幾何集合
+                if (geometry.getType() === 'GeometryCollection') {
+                    // set(key, value, opt_silent(註:更新而不觸發事件。)) 設置一個值。
+                    // modifyGeometry 修改幾何
+                    // clone 製作幾何圖形的完整副本。
+                    feature.set('modifyGeometry', geometry.clone(), true);
+                }
+            });
+        });
+
+        // 修改結束
+        modify.on('modifyend', function (event) {
+            // 獲取特徵
+            event.features.forEach(function (feature) {
+                // get(key)獲取一個值。
+                // modifyGeometry 修改幾何
+                const modifyGeometry = feature.get('modifyGeometry');
+                if (modifyGeometry) {
+                    // setGeometry 設置特徵的默認幾何。保存要在交互結束時應用的更改。
+                    feature.setGeometry(modifyGeometry);
+                    // 取消設置屬性。
+                    // modifyGeometry 修改幾何
+                    feature.unset('modifyGeometry', true);
+                }
+            });
+        });
+
+        // 將給定的交互添加到地圖。
+        map.addInteraction(modify);
+
+        // 畫, 臨時
+        let draw, snap; // 全局，以便我們以後可以刪除它們
+        // 抓取下拉市選單的 id
+        const typeSelect = document.getElementById('type');
+
+        // 添加交互
+        function addInteractions() {
+            // 抓取值
+            let value = typeSelect.value;
+            // 幾何函數
+            let geometryFunction;
+            // 判斷等於 測地線
+            if (value === 'Geodesic') {
+                // 圓圈
+                value = 'Circle';
+                // coordinates 座標
+                // geometry 幾何
+                // projection 投影
+                geometryFunction = function (coordinates, geometry, projection) {
+                    // 判斷使否為空
+                    if (!geometry) {
+                        // 創建新幾何集合
+                        geometry = new ol.geom.GeometryCollection([
+                            // 多邊形幾何。
+                            new ol.geom.Polygon([]),
+                            // 點幾何。
+                            new ol.geom.Point(coordinates[0]),
+                        ]);
+                    }
+                    // 返回構成此幾何集合的幾何圖形。
+                    const geometries = geometry.getGeometries();
+                    // 將坐標從源投影轉換為目標投影。這將返回一個新坐標（並且不會修改原始坐標）。
+                    const center = ol.proj.transform(coordinates[0], projection, 'EPSG:4326');
+                    // 將坐標從源投影轉換為目標投影。這將返回一個新坐標（並且不會修改原始坐標）。
+                    const last = ol.proj.transform(coordinates[1], projection, 'EPSG:4326');
+                    // getDistance(c1, c2, radius(註:要使用的球體半徑。使用 WGS84 橢球默認為地球的平均半徑。)) 獲取兩個地理坐標之間的大圓距離（以米為單位）。
+                    const radius = ol.sphere.getDistance(center, last);
+                    // circular（中心，半徑，多邊形數量，球體的半徑）(註:參數3 4可選) “圓形”多邊形。
+                    const circle = ol.geom.Polygon.circular(center, radius, 128);
+                    // transform(當前)將坐標從源投影轉換為目標投影。這將返回一個新坐標（並且不會修改原始坐標）。
+                    circle.transform('EPSG:4326', projection);
+                    // 設定座標
+                    // getCoordinates 獲取此幾何的坐標數組。該數組具有多邊形的 GeoJSON 坐標數組的結構。
+                    geometries[0].setCoordinates(circle.getCoordinates());
+                    // 保存要在交互結束時應用的更改
+                    geometry.setGeometries(geometries);
+                    return geometry;
+                };
+            }
+
+            // 用於繪製特徵幾何圖形的交互。
+            draw = new ol.interaction.Draw({
+                // 來源
+                source: source,
+                // 類型
+                type: value,
+                // 更新幾何坐標時調用的函數。
+                geometryFunction: geometryFunction,
+            });
+            // 將給定的交互添加到地圖。
+            map.addInteraction(draw);
+            snap = new ol.interaction.Snap({
+                // 捕捉到來自此來源的要素。應提供此選項或功能
+                source: source
+            });
+            // 將給定的交互添加到地圖。
+            map.addInteraction(snap);
+        }
+
+        /**
+         * 處理更改事件，當元素內容更改時觸發事件。
+         */
+        typeSelect.onchange = function () {
+            // 從地圖中刪除給定的交互。
+            map.removeInteraction(draw);
+            // 從地圖中刪除給定的交互。
+            map.removeInteraction(snap);
+            // 添加交互(自訂方法)
+            addInteractions();
+        };
+
+        // 開啟網頁時執行，若沒有此行，未更改下拉式選單選項時，會無法繪圖。
+        addInteractions();
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/draw-and-modify-geodesic.html">官方範例</a>
+</body>
+
+</html>

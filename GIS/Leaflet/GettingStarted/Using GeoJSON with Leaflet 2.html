@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>將 GeoJSON 與地圖一起使用2</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+    
+    <!-- 連結 Using GeoJSON with Leaflet 2.js檔 -->
+    <script src="js/Using GeoJSON with Leaflet 2.js" type="text/javascript"></script>
+    
+    <script>
+        // map('id') 地圖
+        // setView([地理坐標], 縮放級別)
+        // 設計一個籃子儲存地圖中心座標
+        var map = L.map('map').setView([39.74739, -105], 13);
+    
+        L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+            // 最大縮放
+            maxZoom: 18,
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+            id: 'mapbox/light-v9',
+            // 地圖尺寸
+            tileSize: 512,
+            // 地圖偏移
+            zoomOffset: -1
+        }).addTo(map);
+    
+        // icon({設定路徑大小位置}) 圖標
+        var baseballIcon = L.icon({
+            // 圖片路徑
+            iconUrl: 'img/baseball-marker.png',
+            // 圖片大小
+            iconSize: [32, 37],
+            // 圖片位置
+            iconAnchor: [16, 37],
+            // 彈出視窗的位置
+            popupAnchor: [0, -28]
+        });
+        </script>
+
+        <!-- 以下有使用 sample-geojson.js -->
+        <script>
+        // 設計一個方法傳入 兩個值
+        function onEachFeature(feature, layer) {
+            var popupContent = "<p>I started out as a GeoJSON " +
+                    // geometry底下的 type
+                    feature.geometry.type + ", but now I'm a Leaflet vector!</p>";
+    
+            // 判斷有 properties以及 properties.popupContent
+            if (feature.properties && feature.properties.popupContent) {
+                // popupContent 累加 feature.properties.popupContent裡的文字
+                popupContent += feature.properties.popupContent;
+            }
+
+            // 每個特徵
+            // bindPopup 點擊彈出視窗
+            layer.bindPopup(popupContent);
+        }
+        
+        // 綠色大地圖及橘子點
+        // feature為 js內的參數
+        // geoJSON(變數名稱) or geoJSON([變數名稱, 變數名稱])可使用 js裡的變數名稱
+        L.geoJSON([bicycleRental, campus], {
+
+            // 設style 為方法取 js裡的參數
+            style: function (feature) {
+                // 回傳 feature.properties 及 feature.properties.style
+                return feature.properties && feature.properties.style;
+            },
+            
+            // onEachFeature 獲得事件設定
+            // onEachFeature 自己設計的方法
+            onEachFeature: onEachFeature,
+            
+            // pointToLayer 改變樣式
+            pointToLayer: function (feature, latlng) {
+
+                // 點對層
+                // circleMarker 圓形標記
+                return L.circleMarker(latlng, {
+                    // 半徑
+                    radius: 8,
+                    // 填滿
+                    fillColor: "#ff7800",
+                    // 框色
+                    color: "#000",
+                    // 框線寬度
+                    weight: 1,
+                    // 框線透明度
+                    opacity: 1,
+                    // 填滿透明度
+                    fillOpacity: 0.8
+                });
+            }
+        }).addTo(map);
+    </script>
+    <script>
+        // 藍色線
+        // geoJSON可使用 js裡的變數名稱
+        L.geoJSON(freeBus, {
+            // filter 篩選
+            filter: function (feature, layer) {
+                // 判斷有 properties
+                if (feature.properties) {
+                    // If the property "underConstruction" exists and is true, return false (don't render features under construction)
+                    // underConstruction 的值或類型不等於 undefined(未定義的類型)
+                    // 如果屬性“underConstruction”存在且為真，則返回假
+                    // 篩選
+                    return feature.properties.underConstruction !== undefined ? !feature.properties.underConstruction : true;
+                }
+                return false;
+            },
+    
+            // onEachFeature 獲得事件設定
+            // onEachFeature 自己設計的方法
+            onEachFeature: onEachFeature
+        }).addTo(map);
+        
+        // 綠色打棒球圖片
+        // geoJSON可使用 js裡的變數名稱
+        var coorsLayer = L.geoJSON(coorsField, {
+
+            // pointToLayer 改變樣式
+            pointToLayer: function (feature, latlng) {
+                // marker([地理坐標]) 標記符號(地圖上標記符號)
+                // icon({設定路徑大小位置}) 圖標
+                // baseballIcon設定好的樣式
+                return L.marker(latlng, {icon: baseballIcon});
+            },
+            
+            // onEachFeature 獲得事件設定
+            // onEachFeature 自己設計的方法
+            onEachFeature: onEachFeature
+        }).addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/geojson/">官網範例連結</a>
+</body>
+</html>

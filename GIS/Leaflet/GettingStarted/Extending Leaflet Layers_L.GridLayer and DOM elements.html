@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴展地圖：層-L.GridLayer 和 DOM 元素</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+
+    <!-- 連結 Extending Leaflet Layers_L.GridLayer and DOM elements.js檔 -->
+    <script src='js/Extending Leaflet Layers_L.GridLayer and DOM elements.js'></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <!-- L.GridLayer 和 DOM 元素 -->
+    <!-- 另一種擴展方法是L.GridLayer.createTile(). 當L.TileLayer假定有圖像的網格（如<img>元素），L.GridLayer並不認為-它允許創建任何類型的電網HTML元素。
+    L.GridLayer允許創建<img>s 的網格，但<div>s、<canvas>es或<picture>s（或任何東西）的網格是可能的。createTile()只需要返回HTMLElement給定瓷磚坐標的實例。了解如何操作DOM 中的元素在這裡很重要：Leaflet 需要 的實例HTMLElement，因此使用 jQuery 等庫創建的元素將有問題。
+    自定義的一個示例是在 .xml 文件GridLayer中顯示圖塊坐標<div>。這在調試 Leaflet 的內部結構以及了解 tile 坐標如何工作時特別有用： -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 中心點
+            center: [0, 0],
+            // 縮放等級
+            zoom: 0
+        });
+        
+        // gridLayer 將為您處理這些 DOM 元素的創建和動畫處理。
+        // L.gridLayer.自訂名稱
+        L.gridLayer.debugCoords = function(opts) {
+            // L.GridLayer_and_DOM.js 有 3個方法可以呼叫
+            return new L.GridLayer.CanvasCircles;
+        };
+
+        // addLayer 將給定的圖層添加到地圖
+        map.addLayer( L.gridLayer.debugCoords() );
+    </script>
+    <a href="https://leafletjs.com/examples/extending/extending-2-layers.html">官網範例連結</a>
+</body>
+</html>

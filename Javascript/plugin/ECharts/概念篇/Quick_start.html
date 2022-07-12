@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快速上手</title>
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    // 指定图表的配置项和数据
+    var option = {
+      // 標頭
+      title: {
+        text: 'ECharts 入门示例'
+      },
+      // 提示設定（滑鼠懸浮到圖上的互動樣式） 顯示 series或 dataset設定的內容
+      tooltip: {},
+      // 說明 顯示 legend或 dimensions或 source第一行設定的內容
+      legend: {
+        data: ['销量']
+      },
+      // X軸
+      xAxis: {
+        data: ['衬衫', '羊毛衫', '雪纺衫', '裤子', '高跟鞋', '袜子']
+      },
+      // Y軸
+      yAxis: {},
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          name: '销量',
+          // 柱狀圖
+          type: 'bar',
+          data: [5, 20, 36, 10, 10, 20]
+        }
+      ]
+    };
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/get-started">官網範例連結</a>
+</body>
+
+</html>

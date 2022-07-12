@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArcGIS REST 要素服務</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <script src="Js/jQuery_3.6.0.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>ArcGIS REST 要素服務</h1>
+    <div id="map" class="map"></div>
+    <div id="info">&nbsp;</div>
+    <h4>此示例在視圖範圍更改時從 ArcGIS REST 要素服務加載新要素。</h4>
+    <script>
+        // 網址
+        const serviceUrl ='https://sampleserver3.arcgisonline.com/ArcGIS/rest/services/Petroleum/KSFields/FeatureServer/';
+        // 儲存 url網址圖層
+        const layer = '0';
+
+        // 以 EsriJSON 格式讀取和寫入數據的特徵格式。
+        const esrijsonFormat = new ol.format.EsriJSON();
+
+        // 設置風格 以下為各圖層名稱
+        const styleCache = {
+            // 廢棄: 設置風格
+            'ABANDONED': new ol.style.Style({
+                // 填充樣式
+                fill: new ol.style.Fill({
+                    // 顏色: 黑色
+                    color: 'rgba(225, 225, 225, 255)',
+                }),
+                // 筆劃(邊框)風格
+                stroke: new ol.style.Stroke({
+                    // 顏色: 藍色
+                    color: 'rgba(0, 0, 0, 255)',
+                    // 邊框寬度
+                    width: 0.4,
+                }),
+            }),
+            // 氣體: 設置風格
+            'GAS': new ol.style.Style({
+                // 填充樣式
+                fill: new ol.style.Fill({
+                    // 顏色: 紅色
+                    color: 'rgba(255, 0, 0, 255)',
+                }),
+                // 筆劃(邊框)風格
+                stroke: new ol.style.Stroke({
+                    // 顏色: 灰色
+                    color: 'rgba(110, 110, 110, 255)',
+                    // 邊框寬度
+                    width: 0.4,
+                }),
+            }),
+            // 油: 設置風格
+            'OIL': new ol.style.Style({
+                // 填充樣式
+                fill: new ol.style.Fill({
+                    // 顏色: 綠色
+                    color: 'rgba(56, 168, 0, 255)',
+                }),
+                // 筆劃(邊框)風格
+                stroke: new ol.style.Stroke({
+                    // 顏色: 灰色
+                    color: 'rgba(110, 110, 110, 255)',
+                    // 邊框寬度
+                    width: 0,
+                }),
+            }),
+            // 石油天然氣: 設置風格
+            'OILGAS': new ol.style.Style({
+                // 填充樣式
+                fill: new ol.style.Fill({
+                    // 顏色: 咖啡色
+                    color: 'rgba(168, 112, 0, 255)',
+                }),
+                // 筆劃(邊框)風格
+                stroke: new ol.style.Stroke({
+                    // 顏色: 灰色
+                    color: 'rgba(110, 110, 110, 255)',
+                    // 邊框寬度
+                    width: 0.4,
+                }),
+            }),
+        };
+
+        // 為矢量圖層提供特徵源
+        const vectorSource = new ol.source.Vector({
+            // 加載器函數用於加載特性
+            // function(範圍, 解決, 座標系統, 成功(回調), 失敗)
+            loader: function (extent, resolution, projection, success, failure) {
+                // ArcGIS
+                // encodeURIComponent() 通過將一個，兩個，三個或四個表示字符的 UTF 序列 - 8 編碼的轉義替換為每一個代表的每個實例來編碼（對於由“兩個”組成的情況而言，將只是四個轉義順序）
+                const url =
+                serviceUrl +
+                layer +
+                '/query/?f=json&' +
+                'returnGeometry=true&spatialRel=esriSpatialRelIntersects&geometry=' +
+                encodeURIComponent(
+                    '{"xmin":' +
+                    extent[0] +
+                    ',"ymin":' +
+                    extent[1] +
+                    ',"xmax":' +
+                    extent[2] +
+                    ',"ymax":' +
+                    extent[3] +
+                    ',"spatialReference":{"wkid":102100}}'
+                ) +
+                '&geometryType=esriGeometryEnvelope&inSR=102100&outFields=*' +
+                '&outSR=102100';
+
+                // 連結後端 API
+                $.ajax({
+                    // 請求方式: 讀取
+                    type: "GET",
+                    // 網址
+                    url: url,
+                    // 預期服務器返回的數據類型。
+                    dataType: 'jsonp',
+                    // 要求為Function類型的參數，請求成功後調用的回調函數，有兩個參數。
+                    success: function (response) {
+                        // 判斷發生錯誤
+                        if (response.error) {
+                            // 提示視窗
+                            alert(
+                                response.error.message + '\n' + response.error.details.join('\n')
+                            );
+                            // 失敗
+                            failure();
+                        } else {
+                            // dataProjection 將從文檔中讀取
+                            // readFeatures(來源, opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                            const features = esrijsonFormat.readFeatures(response, {
+                                // 格式閱讀器創建的特徵幾何的投影: 投影座標系統
+                                featureProjection: projection,
+                            });
+
+                            // 判斷 讀取的資料大於 0
+                            if (features.length > 0) {
+                                // 將一批特徵添加到源中。
+                                vectorSource.addFeatures(features);
+                            }
+                            
+                            // 猜測 應該是回調
+                            success(features);
+                        }
+                    },
+                    // 請求失敗時被調用的函數
+                    error: failure,
+                });
+            },
+            // 要使用的加載策略: 創建一個策略函數，用於基於瓦片網格加載要素
+            strategy: ol.loadingstrategy.tile(
+                // 使用標準 XYZ 平鋪方案創建平舖網格。
+                ol.tilegrid.createXYZ({
+                    // 平舖大小（以像素為單位）。
+                    tileSize: 512,
+                })
+            ),
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vector = new ol.layer.Vector({
+            // 來源: 為矢量圖層提供特徵源
+            source: vectorSource,
+            // 圖層樣式
+            style: function (feature) {
+                // get(值) 獲取一個值
+                const classify = feature.get('activeprod');
+                return styleCache[classify];
+            },
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染的平鋪圖像的圖層源
+        const raster = new ol.layer.Tile({
+            // 來源: 具有在 URL 模板中定義的一組 XYZ 格式的 URL 的切片數據的圖層源
+            source: new ol.source.XYZ({
+                // 版權聲明
+                attributions:
+                'Tiles © <a href="https://services.arcgisonline.com/ArcGIS/' +
+                'rest/services/World_Topo_Map/MapServer">ArcGIS</a>',
+                // 網址
+                url:
+                'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+                'World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+            }),
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [raster, vector],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                // ol.proj.fromLonLat([經度,緯度]) 將坐標從經度/緯度轉換為不同的投影
+                center: ol.proj.fromLonLat([-97.6114, 38.8403]),
+                // 視圖縮放等級
+                zoom: 7,
+            }),
+        });
+
+        // 顯示特徵信息
+        const displayFeatureInfo = function (pixel) {
+            // 儲存特徵的籃子
+            const features = [];
+
+            // forEachFeatureAtPixel（像素，回調，opt_options） 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調
+            map.forEachFeatureAtPixel(pixel, function (feature) {
+                // 將特徵儲存起來
+                // push(要添加的元素或陣列) 添加一個或多個元素至陣列的末端，並且回傳陣列的新長度
+                features.push(feature);
+            });
+
+            // 判斷 特徵長度大於 0
+            if (features.length > 0) {
+                // 儲存訊息
+                const info = [];
+                let i, ii;
+                // 抓取每一筆 field_name的資料並儲存起來
+                for (i = 0, ii = features.length; i < ii; ++i) {
+                    info.push(features[i].get('field_name'));
+                }
+                // 顯示於 info標籤
+                document.getElementById('info').innerHTML = info.join(', ') || '(unknown)';
+                // getTarget() 獲取渲染此地圖的目標
+                // style.cursor 鼠標光標
+                // pointer 指針(圖標)
+                map.getTarget().style.cursor = 'pointer';
+            } else {
+                // info標籤內容更新為空白
+                document.getElementById('info').innerHTML = '&nbsp;';
+                // getTarget() 獲取渲染此地圖的目標
+                // style.cursor 鼠標光標
+                map.getTarget().style.cursor = '';
+            }
+        };
+
+        // 當指針移動時觸發。請注意，在觸摸設備上，這是在平移地圖時觸發的，因此與 mousemove 不同。
+        map.on('pointermove', function (evt) {
+            // 拖動介面
+            if (evt.dragging) {
+                return;
+            }
+            // getEventPixel() 返回瀏覽器事件相對於視口的地圖像素位置
+            // evt.originalEvent 讀取事件屬性
+            const pixel = map.getEventPixel(evt.originalEvent);
+            // 顯示特徵信息(自訂方法)
+            displayFeatureInfo(pixel);
+        });
+
+        // 無需拖動即可單擊
+        map.on('click', function (evt) {
+            // 顯示特徵信息(自訂方法)
+            displayFeatureInfo(evt.pixel);
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/vector-esri.html">官方範例</a>
+</body>
+
+</html>

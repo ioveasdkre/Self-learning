@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彈出事件</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+
+    .ol-popup {
+        position: absolute;
+        background-color: white;
+        box-shadow: 0 1px 4px rgba(211, 19, 19, 0.2);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #cccccc;
+        bottom: 12px;
+        left: -50px;
+        min-width: 280px;
+    }
+
+    .ol-popup:after,
+    .ol-popup:before {
+        top: 100%;
+        border: solid transparent;
+        content: " ";
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+    }
+
+    .ol-popup:after {
+        border-top-color: white;
+        border-width: 10px;
+        left: 48px;
+        margin-left: -10px;
+    }
+
+    .ol-popup:before {
+        border-top-color: #cccccc;
+        border-width: 11px;
+        left: 48px;
+        margin-left: -11px;
+    }
+
+    /* 彈跳視窗關閉 */
+    .ol-popup-closer {
+        text-decoration: none;
+        position: absolute;
+        top: 2px;
+        right: 8px;
+    }
+
+    .ol-popup-closer:after {
+        content: "✖";
+    }
+</style>
+
+<body>
+    <h1>彈出事件</h1>
+    <div id="map" class="map"></div>
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div>
+    <h4>單擊地圖以獲取彈出窗口。彈出窗口由幾個基本元素組成：容器、關閉按鈕和內容位置。要將彈出窗口錨定到地圖，ol/Overlay使用彈出容器創建一個。為地圖click事件註冊一個偵聽器以顯示彈出窗口，另一個偵聽器設置為click關閉按鈕的處理程序以隱藏彈出窗口。
+    </h4>
+    <script>
+        /**
+         * 構成彈出窗口的元素。
+         */
+        // 彈出視窗
+        const container = document.getElementById('popup');
+        // 彈出內容
+        const content = document.getElementById('popup-content');
+        // 彈出關閉器
+        const closer = document.getElementById('popup-closer');
+
+        /**
+         * 創建一個疊加層以將彈出窗口錨定到地圖上。
+         */
+        // 要在地圖上顯示並附加到單個地圖位置的元素。
+        const overlay = new ol.Overlay({
+            // 疊加元素。
+            element: container,
+            // 調用時平移地圖 setPosition，以便覆蓋在當前視口中完全可見？如果true（已棄用），則 autoPanAnimation和autoPanMargin將用於確定平移參數；如果提供了一個對象，則其他參數將被忽略。
+            autoPan: true,
+            // 用於將疊加層平移到視圖中的動畫選項。此動畫僅在 autoPan啟用時使用。可以提供 Aduration和 easing來自定義動畫。如果 autoPan作為對象提供，則棄用並忽略。
+            autoPanAnimation: {
+                duration: 250,
+            },
+        });
+
+        /**
+         * 添加單擊處理程序以隱藏彈出窗口。
+         * @return {boolean} 不要跟著href。
+         */
+        closer.onclick = function () {
+            // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+            overlay.setPosition(undefined);
+            // 從當前元素中移除鍵盤焦點。
+            // 參考網址:https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/blur
+            closer.blur();
+            return false;
+        };
+
+        const key = 'Get your own API key at https://www.maptiler.com/cloud/';
+        // 版權說明
+        const attributions =
+            '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
+            '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>';
+
+        /**
+         * 創建地圖。
+         */
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                    // source: new ol.source.XYZ({
+                    //     attributions: attributions,
+                    //     url: 'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=' + key,
+                    //     tileSize: 512,
+                    // }),
+                }),
+            ],
+            // 最初添加到地圖的疊加層。默認情況下，不添加疊加層。
+            overlays: [overlay],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2
+            }),
+        });
+
+        /**
+         * 向地圖添加單擊處理程序以呈現彈出窗口。
+         */
+        // singleclick 真正的單擊，無需拖動和雙擊。請注意，此事件會延遲 250 毫秒，以確保它不是雙擊。
+        map.on('singleclick', function (evt) {
+            // 座標
+            const coordinate = evt.coordinate;
+            // ol.coordinate.toStringHDMS(座標, 顯示小數點後幾位) 用半球、度、分和秒格式化地理坐標。
+            // ol.proj.toLonLat(座標, 座標系統(例:EPSG:3857)) 坐標為經度和緯度，即以經度為第一個元素，緯度為第二個元素的數組。
+            const hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(coordinate));
+
+            // 獲取或設置元素中包含的HTML或XML標記。
+            content.innerHTML = '<p>You clicked here:</p><code>' + hdms + '</code>';
+            // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+            overlay.setPosition(coordinate);
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/popup.html">官方範例</a>
+</body>
+
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帶有 512x512 切片的 ArcGIS REST</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- core-js 使用 api的套件-->
+    <script src="Js/core3.20.3.js"></script>
+    <script src="Js/jQuery_3.6.0.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>帶有 512x512 切片的 ArcGIS REST</h1>
+    <div id="map" class="map"></div>
+    <h4>具有自定義切片大小（此處：512x512 像素）和投影（此處：EPSG:4326）的 ArcGIS REST 切片服務受ol/source/XYZ.</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染的平鋪圖像的圖層源
+                new ol.layer.Tile({
+                    // 來源: 具有在 URL 模板中定義的一組 XYZ 格式的 URL 的切片數據的圖層源
+                    source: new ol.source.XYZ({
+                        attributions: 'Copyright:© 2013 ESRI, i-cubed, GeoEye', // 版權聲明
+                        url:
+                        'https://services.arcgisonline.com/arcgis/rest/services/' +
+                        'ESRI_Imagery_World_2D/MapServer/tile/{z}/{y}/{x}', // 網址
+                        maxZoom: 15, // 最大縮放
+                        projection: 'EPSG:4326', // 座標系統
+                        tileSize: 512, // ArcGIS 切片服務支持的切片大小
+                        maxResolution: 180 / 512, // Esri 的平舖網格在一個 512 像素的平鋪上適合 180 度
+                        wrapX: true, // 是否水平包裹世界。
+                    }),
+                }),
+            ],
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                center: [0, 0], // 地圖中心地點:[經度,緯度]
+                projection: 'EPSG:4326', // 座標系統
+                zoom: 2, // 視圖縮放等級
+                minZoom: 2, // 最小縮放
+            }),
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/xyz-esri-4326-512.html">官方範例</a>
+</body>
+
+</html>

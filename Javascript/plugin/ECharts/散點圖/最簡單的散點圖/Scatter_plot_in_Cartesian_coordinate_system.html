@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>笛卡爾坐標系下的散點圖</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 800px;height:600px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // X座標
+            xAxis: {},
+            // Y座標
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 散點圖
+                    type: 'scatter',
+                    // 數據 [x,y]座標
+                    data: [
+                        [10, 5],
+                        [0, 8],
+                        [6, 10],
+                        [2, 12],
+                        [8, 9]
+                    ]
+                }
+            ]
+        };
+        //#endregion
+
+        // 使用剛指定的配置項和數據顯示圖表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/scatter/basic-scatter">官網範例連結</a>
+</body>
+
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMTS 圖層</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>WMTS 圖層</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>此示例顯示如何手動創建用於訪問 WMTS 的配置。功能示例中的WMTS 層展示瞭如何從 GetCapabilities 響應創建配置。</h4>
+    <script>
+        // ol.proj.get(座標系統) 獲取指定代碼的 座標系統對象。
+        const projection = ol.proj.get('EPSG:3857');
+        // 獲取此平舖網格的範圍（如果已配置）。
+        const projectionExtent = projection.getExtent();
+        // ol.extent.getWidth(範圍) 獲取範圍的寬度。
+        const size = ol.extent.getWidth(projectionExtent) / 256;
+        // 決議。宣告長度為 19的陣列
+        const resolutions = new Array(19);
+        // 矩陣 ID。宣告長度為 19的陣列
+        const matrixIds = new Array(19);
+        for (let z = 0; z < 19; ++z) {
+            // 為這個 WMTS 生成分辨率和 matrixIds 數組
+            // Math.pow(base, exponent) 回傳 base 的 exponent 次方（幂）值，也就是 baseexponent。
+            resolutions[z] = size / Math.pow(2, z);
+            // 矩陣 ID。
+            matrixIds[z] = z;
+        }
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                }),
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 透明度
+                    opacity: 0.7,
+                    // 來源: 來自 WMTS服務器的切片數據的圖層源。
+                    source: new ol.source.WMTS({
+                        // 版權聲明
+                        attributions:
+                            'Tiles © <a href="https://mrdata.usgs.gov/geology/state/"' +
+                            ' target="_blank">USGS</a>',
+                        // 服務的 URL。
+                        url: 'https://mrdata.usgs.gov/mapcache/wmts',
+                        // WMTS 功能中公佈的圖層名稱。
+                        layer: 'sgmc2',
+                        // 矩陣集。
+                        matrixSet: 'GoogleMapsCompatible',
+                        // 圖像格式。
+                        format: 'image/png',
+                        // 座標系統
+                        projection: projection,
+                        // 瓷磚網格。: 為訪問 WMTS 平鋪圖像服務器的源設置網格模式。
+                        tileGrid: new ol.tilegrid.WMTS({
+                            // 對於每個縮放級別，平舖網格原點，即x和y軸相交 ( [z, 0, 0]) 的位置。如果給定，數組長度應與數組長度匹配resolutions，即每個分辨率可以有不同的原點。瓷磚坐標從左到右和向下增加。如果沒有指定，extent或者origin必須提供。
+                            // ol.extent.getTopLeft 獲取範圍的左上角坐標。
+                            origin: ol.extent.getTopLeft(projectionExtent),
+                            // 決議。每個分辨率的數組索引需要匹配縮放級別。
+                            resolutions: resolutions,
+                            // 矩陣 ID。這個數組的長度需要和數組的長度相匹配resolutions。
+                            matrixIds: matrixIds,
+                        }),
+                        // WMTS 功能中公佈的樣式名稱。
+                        style: 'default',
+                        // 是否水平包裹世界。
+                        wrapX: true,
+                    }),
+                }),
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [-11158582, 4813697],
+                // 視圖縮放等級
+                zoom: 4,
+            }),
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wmts.html">官方範例</a>
+</body>
+
+</html>

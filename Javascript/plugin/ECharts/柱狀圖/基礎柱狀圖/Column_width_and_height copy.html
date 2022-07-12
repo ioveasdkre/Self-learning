@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>柱條寬度和高度</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // X座標
+            xAxis: {
+                // 數據
+                data: ['A', 'B', 'C', 'D', 'E']
+            },
+            // Y座標
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 數據
+                    data: [10, 22, 28, 43, 49],
+                    // 柱狀圖
+                    type: 'bar',
+                    // 數據堆疊
+                    stack: 'x',
+                    // 柱狀圖寬度
+                    barWidth: '50%',
+                    // 柱狀圖最大寬度
+                    barMaxWidth: '20',
+                    // 柱狀圖最小高度
+                    barMinHeight: '50'
+                },
+                {
+                    // 數據
+                    data: [5, 4, 3, 5, 10],
+                    // 柱狀圖
+                    type: 'bar',
+                    // 數據堆疊
+                    stack: 'x',
+                    // 柱狀圖寬度
+                    barWidth: '50%',
+                    // 柱狀圖最大寬度
+                    barMaxWidth: '20',
+                    // 柱狀圖最小高度
+                    barMinHeight: '50'
+                }
+            ]
+        };
+        //#endregion
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/bar/basic-bar">官網範例連結</a>
+</body>
+
+</html>

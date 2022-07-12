@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鼠標位置(抓取座標)</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>鼠標位置(抓取座標)</h1>
+    <div id="map" class="map"></div>
+    <div id="mouse-position"></div>
+    <form>
+        <label for="projection">座標系統</label>
+        <select id="projection">
+            <option value="EPSG:4326">EPSG:4326</option>
+            <option value="EPSG:3857">EPSG:3857</option>
+        </select>
+        <label for="precision">顯示小數幾位</label>
+        <input id="precision" type="number" min="0" max="12" value="4" />
+    </form>
+    <h4>地圖外的鼠標位置控制示例。</h4>
+    <script>
+        // 顯示鼠標光標二維坐標(滑鼠位置)的控件。
+        const mousePositionControl = new ol.control.MousePosition({
+            // 坐標格式: 小數點後要包含的位數。默認為0。
+            coordinateFormat: ol.coordinate.createStringXY(4),
+            // 座標系統: WGS84經緯度（全球性資料，如：GPS） ＝> EPSG:4326
+            projection: 'EPSG:4326',
+            // 註釋以下兩行已將鼠標位置放置在地圖內。
+            // css:css名稱
+            className: 'custom-mouse-position',
+            // 如果您希望控件在地圖視口之外呈現，請指定一個目標。
+            target: document.getElementById('mouse-position'),
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 最初添加到地圖的控件。:defaults 默認情況下包含在地圖中的一組控件。除非另有配置，否則這將返回一個包含以下每個控件的實例的集合：
+            // extend 將元素添加到集合中。這會將提供的數組中的每個項目推送到集合的末尾。
+            controls: ol.control.defaults().extend([mousePositionControl]),
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                }),
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [0, 0],
+                // 視圖縮放等級
+                zoom: 2
+            }),
+        });
+
+        // 座標系統
+        const projectionSelect = document.getElementById('projection');
+        // addEventListener 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        // change 通用更改事件。當修改元素的值時觸發。
+        projectionSelect.addEventListener('change', function (event) {
+            // setProjection(座標系統) 設置用於報告鼠標位置的投影(座標系統)。
+            mousePositionControl.setProjection(event.target.value);
+        });
+
+        // 顯示小數幾位
+        const precisionInput = document.getElementById('precision');
+        // addEventListener 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        // change 通用更改事件。當修改元素的值時觸發。
+        precisionInput.addEventListener('change', function (event) {
+            // createStringXY(數字) 顯式指定小數位幾位
+            const format = createStringXY(event.target.valueAsNumber);
+            // 設置用於渲染當前位置的坐標格式類型。
+            mousePositionControl.setCoordinateFormat(format);
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/mouse-position.html">官方範例</a>
+</body>
+
+</html>

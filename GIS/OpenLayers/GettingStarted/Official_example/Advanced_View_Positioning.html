@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高級視圖定位</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+
+    .mapcontainer {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .map {
+        width: 1000px;
+        height: 600px;
+    }
+
+    .map .ol-zoom {
+        top: 178px;
+        left: 158px;
+    }
+
+    .map .ol-rotate {
+        top: 178px;
+        right: 58px;
+    }
+
+    .map .ol-attribution,
+    .map .ol-attribution.ol-uncollapsible {
+        bottom: 30px;
+        right: 50px;
+    }
+
+    .padding-top {
+        position: absolute;
+        top: 0;
+        left: 0px;
+        width: 1000px;
+        height: 170px;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .padding-left {
+        position: absolute;
+        top: 170px;
+        left: 0;
+        width: 150px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .padding-right {
+        position: absolute;
+        top: 170px;
+        left: 950px;
+        width: 50px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .padding-bottom {
+        position: absolute;
+        top: 570px;
+        left: 0px;
+        width: 1000px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .center {
+        position: absolute;
+        border: solid 1px black;
+        top: 490px;
+        left: 560px;
+        width: 20px;
+        height: 20px;
+    }
+</style>
+
+<body>
+    <h1>高級視圖定位</h1>
+    <div class="mapcontainer">
+        <div id="map" class="map"></div>
+        <div class="padding-top"></div>
+        <div class="padding-left"></div>
+        <div class="padding-right"></div>
+        <div class="padding-bottom"></div>
+        <div class="center"></div>
+    </div>
+    <button id="zoomtoswitzerland">放大到瑞士</button> (最合適).<br />
+    <button id="zoomtolausanne">放大到洛桑</button> (最小分辨率),<br />
+    <button id="centerlausanne">放大到洛桑中心</button>
+    <h4>此示例演示如何調整地圖視圖，以便將幾何圖形或坐標定位在特定像素位置。上面的地圖在視口內應用了頂部、右側、底部和左側的填充。視圖的fit方法用於在具有相同填充的視圖中擬合幾何圖形。視圖的centerOn方法用於在特定像素位置（黑框的中心）定位坐標（洛桑）。</h4>
+    <h4>使用Alt+Shift+Drag旋轉地圖。</h4>
+    <script>
+        // 為矢量圖層提供特徵源(geojson檔)。
+        var source = new ol.source.Vector({
+            // 路徑
+            url: 'https://openlayers.org/en/v4.6.5/examples/data/geojson/switzerland.geojson',
+            // format  XHR 功能加載器在url設置時使用的功能格式。如果url設置，則為必需，否則忽略。
+            // ol.format.GeoJSON 用於以 GeoJSON 格式讀取和寫入數據的特徵格式。
+            format: new ol.format.GeoJSON()
+        });
+
+        // 設定風格
+        var style = new ol.style.Style({
+            // 填充樣式:設置矢量特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(255, 255, 255, 0.6)'
+            }),
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 邊框顏色
+                color: '#319FD3',
+                // 邊線寬度
+                width: 1
+            }),
+            // 圖像風格。:為矢量特徵設置圓形樣式。
+            image: new ol.style.Circle({
+                // 圓半徑。
+                radius: 5,
+                // 填充樣式:設置矢量特徵的填充樣式。
+                fill: new ol.style.Fill({
+                    // 填滿
+                    color: 'rgba(255, 255, 255, 0.6)'
+                }),
+                // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+                stroke: new ol.style.Stroke({
+                    // 邊框顏色
+                    color: '#319FD3',
+                    // 邊線寬度
+                    width: 1
+                })
+            })
+        });
+
+        // 在客戶端呈現的矢量數據(geojson檔)。
+        var vectorLayer = new ol.layer.Vector({
+            // 來源
+            source: source,
+            // 圖層樣式。
+            style: style
+        });
+
+        // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+        var view = new ol.View({
+            // 地圖中心地點:[經度,緯度]
+            center: [0, 0],
+            // 視圖縮放等級
+            zoom: 1
+        });
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM()
+                }),
+                // 矢量層(geojson檔)(自己設定的物件)
+                vectorLayer
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 最初添加到地圖的控件。
+            controls: ol.control.defaults({
+                // 來源選項
+                attributionOptions: {
+                    // 指定是否可以折疊來源(版權資訊)。
+                    collapsible: false
+                }
+            }),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: view
+        });
+
+        const zoomtoswitzerland = document.getElementById('zoomtoswitzerland');
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        zoomtoswitzerland.addEventListener(
+            'click',
+            function () {
+                // 以隨機順序獲取源上當前功能的快照。返回的數組是一個副本，特徵是對源中特徵的引用。
+                const feature = source.getFeatures()[0];
+                // 獲取特徵的默認幾何。
+                const polygon = feature.getGeometry();
+                // fit(適合視圖的幾何圖形或範圍,{設定值}) 根據給定的地圖大小和邊界擬合給定的幾何圖形或範圍。大小是框的像素尺寸以適應範圍。
+                view.fit(polygon, {
+                    // 要在視圖內清除的填充（以像素為單位）(註:內距)。數組中的值是頂部、右側、底部和左側填充。
+                    padding: [170, 50, 30, 150]
+                });
+            },
+            false
+        );
+
+        const zoomtolausanne = document.getElementById('zoomtolausanne');
+        // addEventListener 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        zoomtolausanne.addEventListener(
+            'click',
+            function () {
+                // 以隨機順序獲取源上當前功能的快照。返回的數組是一個副本，特徵是對源中特徵的引用。
+                const feature = source.getFeatures()[1];
+                // 獲取特徵的默認幾何。
+                const point = feature.getGeometry();
+                // fit(適合視圖的幾何圖形或範圍,{設定值}) 根據給定的地圖大小和邊界擬合給定的幾何圖形或範圍。大小是框的像素尺寸以適應範圍。
+                view.fit(point, {
+                    // 要在視圖內清除的填充（以像素為單位）(註:內距)。數組中的值是頂部、右側、底部和左側填充。
+                    padding: [170, 50, 30, 150],
+                    // 我們縮放到的最小分辨率。
+                    minResolution: 50
+                });
+            },
+            false
+        );
+
+        const centerlausanne = document.getElementById('centerlausanne');
+        // addEventListener 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        centerlausanne.addEventListener(
+            'click',
+            function () {
+                // 以隨機順序獲取源上當前功能的快照。返回的數組是一個副本，特徵是對源中特徵的引用。
+                const feature = source.getFeatures()[1];
+                // 獲取特徵的默認幾何。
+                const point = feature.getGeometry();
+                // 獲取此地圖的大小。
+                const size = map.getSize();
+                // centerOn （坐標、大小、位置） 以坐標和視圖位置為中心。
+                view.centerOn(point.getCoordinates(), size, [570, 500]);
+            },
+            false
+        );
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/center.html">官方範例</a>
+</body>
+
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文本、文本框、文本片段的基本樣式和裝飾</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 800px;height:600px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    /*
+      每个文本可以设置基本的字体样式：fontStyle、fontWeight、fontSize、fontFamily。
+      可以设置文字的颜色 color 和边框的颜色 textBorderColor、textBorderWidth。
+      文本框可以设置边框和背景的样式：borderColor、borderWidth、backgroundColor、padding。
+      文本片段也可以设置边框和背景的样式：borderColor、borderWidth、backgroundColor、padding。
+    */
+
+    //#region 指定图表的配置项和数据
+    option = {
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          // 散點圖
+          type: 'scatter',
+          // 符號大小
+          symbolSize: 1,
+          // 數據
+          data: [
+            {
+              // [x,y] 座標
+              value: [0, 0],
+              // 標籤
+              label: {
+                // 正常
+                normal: {
+                  // 展示
+                  show: true,
+                  // 標籤內容格式器，支持字符串模板和回調函數兩種形式，字符串模板與回調函數返回的字符串均支持用 \n 換行。
+                  // {a}：系列名。
+                  // {b}：数据名。
+                  // {c}：数据值。
+                  // {@xxx}：数据中名为 'xxx' 的维度的值，如 {@product} 表示名为 'product' 的维度的值。
+                  // {@[n]}：数据中维度 n 的值，如 {@[3]} 表示维度 3 的值，从 0 开始计数。
+                  // .join(要填的值) 抓取陣列的值 並用 要填的值作為間隔
+                  formatter: [
+                    'Plain text',
+                    '{textBorder|textBorderColor + textBorderWidth}',
+                    '{textShadow|textShadowColor + textShadowBlur + textShadowOffsetX + textShadowOffsetY}',
+                    '{bg|backgroundColor + borderRadius + padding}',
+                    '{border|borderColor + borderWidth + borderRadius + padding}',
+                    '{shadow|shadowColor + shadowBlur + shadowOffsetX + shadowOffsetY}'
+                  ].join('\n'),
+                  // 背景顏色
+                  backgroundColor: '#eee',
+                  // 邊框顏色
+                  borderColor: '#333',
+                  // 邊框寬度
+                  borderWidth: 2,
+                  // 邊界半徑(四角弧度)
+                  borderRadius: 5,
+                  // 內距的設定
+                  padding: 10,
+                  // 字體顏色
+                  color: '#000',
+                  // 字體大小
+                  fontSize: 14,
+                  // 文字块的背景陰影長度。
+                  shadowBlur: 3,
+                  // 文字块的陰影顏色
+                  shadowColor: '#888',
+                  // 文字块陰影偏移X
+                  shadowOffsetX: 0,
+                  // 文字块陰影偏移Y
+                  shadowOffsetY: 3,
+                  // 線的高度
+                  lineHeight: 30,
+                  // 在 rich 裡面，可以自定義富文本樣式。利用富文本樣式，可以在標籤中做出非常豐富的效果。
+                  rich: {
+                    // 對應 formatter的 textBorder
+                    textBorder: {
+                      // 字體大小
+                      fontSize: 20,
+                      // 邊框顏色
+                      textBorderColor: '#000',
+                      // 邊框寬度
+                      textBorderWidth: 3,
+                      // 字體顏色
+                      color: '#fff'
+                    },
+                    // 對應 formatter的 textShadow
+                    textShadow: {
+                      // 字體大小
+                      fontSize: 16,
+                      // 文字陰影模糊
+                      textShadowBlur: 5,
+                      // 文字陰影顏色
+                      textShadowColor: '#000',
+                      // 文字陰影偏移X
+                      textShadowOffsetX: 3,
+                      // 文字陰影偏移Y
+                      textShadowOffsetY: 3,
+                      // 字體顏色
+                      color: '#fff'
+                    },
+                    // 對應 formatter的 bg
+                    bg: {
+                      // 背景顏色
+                      backgroundColor: '#339911',
+                      // 字體顏色
+                      color: '#fff',
+                      // 邊界半徑(四角弧度)
+                      borderRadius: 15,
+                      // 內距的設定
+                      padding: 5
+                    },
+                    // 對應 formatter的 border
+                    border: {
+                      // 字體顏色
+                      color: '#000',
+                      // 邊框顏色
+                      borderColor: '#449911',
+                      // 邊框寬度
+                      borderWidth: 1,
+                      // 邊界半徑(四角弧度)
+                      borderRadius: 3,
+                      // 內距的設定
+                      padding: 10
+                    },
+                    // 對應 formatter的 shadow
+                    shadow: {
+                      // 背景顏色
+                      backgroundColor: '#992233',
+                      // 內距的設定
+                      padding: 5,
+                      // 字體顏色
+                      color: '#fff',
+                      // 文字块的背景阴影长度。
+                      shadowBlur: 5,
+                      // 文字块的阴影颜色
+                      shadowColor: '#336699',
+                      // 文字块偏移X
+                      shadowOffsetX: 6,
+                      // 文字块偏移Y
+                      shadowOffsetY: 6
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      xAxis: {
+        show: false,
+        min: -1,
+        max: 1
+      },
+      yAxis: {
+        show: false,
+        min: -1,
+        max: 1
+      }
+    };
+    //#endregion
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/label/rich-text">官網範例連結</a>
+</body>
+
+</html>

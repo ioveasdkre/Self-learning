@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用地圖窗格</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 什麼是窗格？
+    在 Leaflet 中，地圖窗格隱式地將圖層組合在一起，開發人員不知道它。這種分組允許 Web 瀏覽器以比單獨處理圖層更有效的方式同時處理多個圖層。
+    TileLayers 和GridLayers
+    Paths，如線、折線、圓或GeoJSON圖層。
+    Marker 陰影
+    Marker 圖標
+    Popup秒 -->
+
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <!-- 連結 Working with map panes.js檔 -->
+    <script type="text/javascript" src="js/Working with map panes.js"></script>
+
+    <!-- 默認值並不總是正確的 -->
+    <!-- 在某些特定情況下，默認順序不是地圖的正確順序。我們可以用Carto 底圖和標籤來證明這一點：
+    如果我們用這兩個瓦片層創建一個 Leaflet 地圖，任何標記或多邊形都會顯示在兩者的頂部，但將標籤放在頂部看起來更好。我們怎麼做？ -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map');
+
+        // createPane(<String> name, <HTMLElement> container?)
+        // 如果它不存在，則創建一個具有給定名稱的新地圖窗格，然後返回它。該窗格被創建為 的子項container，如果未設置，則創建為主地圖窗格的子項。
+        map.createPane('labels');
+
+        // getPane 讀取窗格
+        // zIndex 屬性設置或返回定位元素的堆疊順序。
+        map.getPane('labels').style.zIndex = 650;
+
+        // Layers in this pane are non-interactive and do not obscure mouse/touch events
+        // getPane 讀取窗格
+        // pointerEvents = 'none' 禁用所有圖像上的指針事件
+        // https://www.w3schools.com/cssref/tryit.asp?filename=trycss3_pointer-events w3schools範例
+        map.getPane('labels').style.pointerEvents = 'none';
+
+        var cartodbAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>';
+
+        // 圖層
+        // 基底圖面
+        var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', {
+            // attribution 可以放入版權資訊的字串，格式為 html
+            attribution: cartodbAttribution
+        }).addTo(map);
+
+        // 圖層
+        // 文字圖層
+        var positronLabels = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png', {
+            // attribution 可以放入版權資訊的字串，格式為 html
+            attribution: cartodbAttribution,
+            // pane: '標記版面' 將添加標記圖標的位置。
+            pane: 'labels'
+        }).addTo(map);
+        
+        // 表示一個 GeoJSON 對像或一組 GeoJSON 對象。允許您解析 GeoJSON 數據並將其顯示在地圖上。(創建 GeoJSON層)
+        geojson = L.geoJson(euCountries).addTo(map);
+        console.log(euCountries);
+
+        // eachLayer 迭代組的層，可選擇指定迭代器函數的上下文。
+        geojson.eachLayer(function (layer) {
+            // bindPopup 點擊彈出視窗
+            layer.bindPopup(layer.feature.properties.name);
+        });
+
+        // setView([地理坐標], 縮放級別)
+        map.setView({ lat: 47.040182144806664, lng: 9.667968750000002 }, 4);
+    </script>
+    <a href="https://leafletjs.com/examples/map-panes/">官網範例連結</a>
+</body>
+</html>

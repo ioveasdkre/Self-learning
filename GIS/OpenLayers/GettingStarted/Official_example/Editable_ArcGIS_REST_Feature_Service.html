@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可編輯 ArcGIS REST 要素服務</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- core-js 使用 api的套件-->
+    <script src="Js/core3.20.3.js"></script>
+    <script src="Js/jQuery_3.6.0.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>可編輯 ArcGIS REST 要素服務</h1>
+    <div id="map" class="map"></div>
+    <form class="form-inline">
+      <label for="type">繪製或修改 &nbsp;</label>
+      <select id="type">
+        <option value="DRAW">繪製多邊形</option>
+        <option value="MODIFY">修改</option>
+      </select>
+    </form>
+    <h4>此示例從 ArcGIS REST 要素服務加載要素並允許添加新要素或更新現有要素。</h4>
+    <script>
+        // ArcGIS Url
+        const serviceUrl =
+        'https://sampleserver6.arcgisonline.com/arcgis/rest/services/Wildfire/FeatureServer/';
+        // 圖層 ID
+        const layer = '2';
+
+        // 以 EsriJSON 格式讀取和寫入數據的特徵格式。
+        const esrijsonFormat = new ol.format.EsriJSON();
+
+        // 為矢量圖層提供特徵源
+        const vectorSource = new ol.source.Vector({
+            // 加載器函數用於加載特性
+            // function(範圍, 解決, 座標系統)
+            loader: function (extent, resolution, projection) {
+                // ArcGIS
+                // encodeURIComponent() 通過將一個，兩個，三個或四個表示字符的 UTF 序列 - 8 編碼的轉義替換為每一個代表的每個實例來編碼（對於由“兩個”組成的情況而言，將只是四個轉義順序）
+                const url =
+                serviceUrl +
+                layer +
+                '/query/?f=json&' +
+                'returnGeometry=true&spatialRel=esriSpatialRelIntersects&geometry=' +
+                encodeURIComponent(
+                    '{"xmin":' +
+                    extent[0] +
+                    ',"ymin":' +
+                    extent[1] +
+                    ',"xmax":' +
+                    extent[2] +
+                    ',"ymax":' +
+                    extent[3] +
+                    ',"spatialReference":{"wkid":102100}}'
+                ) +
+                '&geometryType=esriGeometryEnvelope&inSR=102100&outFields=*' +
+                '&outSR=102100';
+
+                // 連結後端 API
+                $.ajax({
+                    // 請求方式: 讀取
+                    type: "GET",
+                    // 網址
+                    url: url,
+                    // 預期服務器返回的數據類型。
+                    dataType: 'jsonp',
+                    // 要求為Function類型的參數，請求成功後調用的回調函數，有兩個參數。
+                    success: function (response) {
+                        // 判斷發生錯誤
+                        if (response.error) {
+                            // 提示視窗
+                            alert(
+                                response.error.message + '\n' + response.error.details.join('\n')
+                            );
+                        } else {
+                            // dataProjection 將從文檔中讀取
+                            // readFeatures(來源, opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                            const features = esrijsonFormat.readFeatures(response, {
+                                // 格式閱讀器創建的特徵幾何的投影: 投影座標系統
+                                featureProjection: projection,
+                            });
+                            // 判斷 讀取的資料大於 0
+                            if (features.length > 0) {
+                                // 將一批特徵添加到源中。
+                                vectorSource.addFeatures(features);
+                            }
+                        }
+                    },
+                });
+            },
+            // 要使用的加載策略: 創建一個策略函數，用於基於瓦片網格加載要素
+            strategy: ol.loadingstrategy.tile(
+                // 使用標準 XYZ 平鋪方案創建平舖網格。
+                ol.tilegrid.createXYZ({
+                    // 平舖大小（以像素為單位）。
+                    tileSize: 512,
+                })
+            ),
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vector = new ol.layer.Vector({
+            // 來源: 為矢量圖層提供特徵源
+            source: vectorSource,
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染的平鋪圖像的圖層源
+        const raster = new ol.layer.Tile({
+            // 來源: 具有在 URL 模板中定義的一組 XYZ 格式的 URL 的切片數據的圖層源
+            source: new ol.source.XYZ({
+                // 版權聲明
+                attributions:
+                'Tiles © <a href="https://services.arcgisonline.com/ArcGIS/' +
+                'rest/services/World_Topo_Map/MapServer">ArcGIS</a>',
+                // 網址
+                url:
+                'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+                'World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+            }),
+        });
+
+        // 繪製特徵幾何圖形的交互。
+        const draw = new ol.interaction.Draw({
+            // 來源
+            source: vectorSource,
+            // 類別: 多邊形
+            type: 'Polygon',
+        });
+
+        // 用於選擇矢量特徵的交互。
+        const select = new ol.interaction.Select();
+        // 激活或停用交互。
+        select.setActive(false);
+        // 獲取選定的特徵。
+        const selected = select.getFeatures();
+
+        // 用於修改特徵幾何的交互
+        const modify = new ol.interaction.Modify({
+            // 交互作用的功能。
+            features: selected,
+        });
+        // 激活或停用交互。
+        modify.setActive(false);
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // interactions 最初添加到地圖的交互
+            // ol.interaction.defaults() 默認情況下包含在地圖中的一組交互。
+            // extend 通過從將接收新的附加點的現有幾何體開始來啟動繪製模式。
+            interactions: ol.interaction.defaults().extend([draw, select, modify]),
+            // 這裡是宣告圖層陣列
+            layers: [raster, vector],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                // ol.proj.fromLonLat([經度,緯度]) 將坐標從經度/緯度轉換為不同的投影
+                center: ol.proj.fromLonLat([-110.875, 37.345]),
+                // 視圖縮放等級
+                zoom: 5,
+            }),
+        });
+
+        // 抓取下拉式選單的 值
+        const typeSelect = document.getElementById('type');
+
+        /**
+         * 讓用戶更改交互類型。
+         */
+        typeSelect.onchange = function () {
+            // 激活或停用交互。
+            draw.setActive(typeSelect.value === 'DRAW');
+            // 激活或停用交互。
+            select.setActive(typeSelect.value === 'MODIFY');
+            // 激活或停用交互。
+            modify.setActive(typeSelect.value === 'MODIFY');
+        };
+
+        const dirty = {};
+
+        // 新增
+        selected.on('add', function (evt) {
+            // 讀取元素
+            const feature = evt.element;
+            // 發生改變時
+            feature.on('change', function (evt) {
+                // get(key) 讀取 key的值，並設定為 true
+                dirty[evt.target.get('objectid')] = true;
+            });
+        });
+
+        // 消除事件
+        selected.on('remove', function (evt) {
+            // 讀取元素
+            const feature = evt.element;
+            // get(key) 讀取 key的值
+            const fid = feature.get('objectid');
+            // 判斷選取的特徵為 true
+            if (dirty[fid] === true) {
+                // writeFeature(特徵(功能), opt_options) 將特徵編碼為字符串。
+                const payload =
+                '[' +
+                esrijsonFormat.writeFeature(feature, {
+                    // 將由格式編寫器序列化的特徵幾何的投影。: 讀取 map的座標系統
+                    featureProjection: map.getView().getProjection(),
+                }) +
+                ']';
+
+                // ArcGIS Url
+                const url = serviceUrl + layer + '/updateFeatures';
+                // $.post 使用 HTTP POST 請求向服務器發送數據。
+                // done 添加解析延遲對象時要調用的處理程序。
+                $.post(url, {f: 'json', features: payload}).done(function (data) {
+                    // 判斷讀取的值為 string，真 轉為 json物件，否 傳遞值
+                    const result = typeof data === 'string' ? JSON.parse(data) : data;
+                    // 判斷 更新結果以及 更新長度大於 0
+                    if (result.updateResults && result.updateResults.length > 0) {
+                        // 判斷 請求失敗
+                        if (result.updateResults[0].success !== true) {
+                            // 讀取錯誤訊息
+                            const error = result.updateResults[0].error;
+                            // 提示視窗
+                            // error.description 描述錯誤訊息
+                            alert(error.description + ' (' + error.code + ')');
+                        } else {
+                            delete dirty[fid];
+                        }
+                    }
+                });
+            }
+        });
+
+        // 在特徵繪製結束時觸發
+        draw.on('drawend', function (evt) {
+            // 讀取特徵
+            const feature = evt.feature;
+            // writeFeature(特徵(功能), opt_options) 將特徵編碼為字符串。
+            const payload =
+                '[' +
+                esrijsonFormat.writeFeature(feature, {
+                    // 將由格式編寫器序列化的特徵幾何的投影。: 讀取 map的座標系統
+                    featureProjection: map.getView().getProjection(),
+                }) +
+                ']';
+
+            // ArcGIS Url
+            const url = serviceUrl + layer + '/addFeatures';
+            // $.post 使用 HTTP POST 請求向服務器發送數據。
+            // done 添加解析延遲對象時要調用的處理程序。
+            $.post(url, {f: 'json', features: payload}).done(function (data) {
+                // 判斷讀取的值為 string，真 轉為 json物件，否 傳遞值
+                const result = typeof data === 'string' ? JSON.parse(data) : data;
+                // 判斷 更新結果以及 更新長度大於 0
+                if (result.addResults && result.addResults.length > 0) {
+                    // 判斷 請求失敗
+                    if (result.addResults[0].success === true) {
+                        // set(key, value) 更新值
+                        feature.set('objectid', result.addResults[0]['objectId']);
+                    } else {
+                        // 讀取錯誤訊息
+                        const error = result.addResults[0].error;
+                        // 提示視窗
+                        // error.description 描述錯誤訊息
+                        alert(error.description + ' (' + error.code + ')');
+                    }
+                }
+            });
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/vector-esri-edit.html">官方範例</a>
+</body>
+
+</html>

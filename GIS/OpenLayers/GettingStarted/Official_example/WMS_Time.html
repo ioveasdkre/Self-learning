@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS 時間</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>WMS 時間</h1>
+    <div id="map" class="map"></div>
+    <div role="group" aria-label="Animation controls">
+        <button id="play" type="button">開始</button>
+        <button id="pause" type="button">暫停</button>
+        <span id="info"></span>
+    </div>
+    <h4>在連續更改時間維度時演示圖層的平滑重新加載。顯示的數據：IEM 生成了 NWS NEXRAD WSR-88D III 級基礎反射率的 CONUS 複合材料。</h4>
+    <script>
+        // 三小時前
+        function threeHoursAgo() {
+            // Math.round 回傳四捨五入後的近似值.
+            // Date.now() 回傳自 1970/01/01 00:00:00 UTC 起經過的毫秒數。
+            return new Date(Math.round(Date.now() / 3600000) * 3600000 - 3600000 * 3);
+        }
+
+        // ol.proj.transformExtent(範圍, 來源(座標系統), 轉換目標(座標系統)) 將範圍從源投影轉換為目標投影。這將返回一個新的範圍（並且不會修改原始範圍）。
+        const extent = ol.proj.transformExtent([-126, 24, -66, 50], 'EPSG:4326', 'EPSG:3857');
+        // 三小時前(自訂方法)
+        let startDate = threeHoursAgo();
+        // 每秒幀數
+        const frameRate = 0.5;
+        // 動畫ID
+        let animationId = null;
+
+        // 這裡是宣告圖層陣列
+        const layers = [
+            // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+            new ol.layer.Tile({
+                // Stamen 切片服務器的圖層源。
+                source: new ol.source.Stamen({
+                    // 圖層名稱。
+                    layer: 'terrain',
+                }),
+            }),
+            // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+            new ol.layer.Tile({
+                // 圖層渲染的邊界範圍。該層將不會在此範圍之外渲染。
+                extent: extent,
+                // 來源: WMS 服務器的來源，提供單一的、untiled 的圖像。
+                source: new ol.source.TileWMS({
+                    // 版權聲明
+                    attributions: ['Iowa State University'],
+                    // WMS 服務 URL。
+                    url: 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r-t.cgi',
+                    // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。WIDTH、HEIGHT、BBOX 和CRS（SRS對於 WMS 版本 < 1.3.0）將動態設置。
+                    params: { 'LAYERS': 'nexrad-n0r-wmst' },
+                }),
+            }),
+        ];
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: layers,
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                // ol.extent.getCenter(範圍) 獲取範圍的中心坐標。
+                center: ol.extent.getCenter(extent),
+                // 視圖縮放等級
+                zoom: 4,
+            }),
+        });
+
+        // 更新訊息
+        function updateInfo() {
+            const el = document.getElementById('info');
+            // 以簡化的擴展 ISO 格式 (ISO 8601)，其長度始終為 24 或 27 個字符（分別為YYYY-MM-DDTHH:mm:ss.sssZ 或 ±YYYYYY-MM-DDTHH:mm:ss.sssZ）。
+            el.innerHTML = startDate.toISOString();
+        }
+
+        // 設置時間
+        function setTime() {
+            // setMinutes 根據本地時間設置指定日期的分鐘數。
+            startDate.setMinutes(startDate.getMinutes() + 15);
+
+            // 判斷大於開始時間
+            if (startDate > Date.now()) {
+                startDate = threeHoursAgo();
+            }
+            // getSource 獲取圖層源。
+            // updateParams 更新用戶提供的參數。
+            // toISOString 以簡化的擴展 ISO 格式 (ISO 8601)，其長度始終為 24 或 27 個字符（分別為YYYY-MM-DDTHH:mm:ss.sssZ 或 ±YYYYYY-MM-DDTHH:mm:ss.sssZ）。
+            layers[1].getSource().updateParams({ 'TIME': startDate.toISOString() });
+            // 更新訊息(自訂方法)
+            updateInfo();
+        }
+        // 設置時間(自訂方法)
+        setTime();
+
+        // 停止
+        const stop = function () {
+            // 判斷類型及值不等於null
+            if (animationId !== null) {
+                // 取消之前通過調用 建立的定時重複操作setInterval()。
+                window.clearInterval(animationId);
+                animationId = null;
+            }
+        };
+
+        // 開始
+        const play = function () {
+            // 停止(自訂方法)
+            stop();
+            // Window與 Worker（EN-US）介面皆提供此一函式，此函式作用為重複地執行一個函式呼叫或一個程式碼片斷，每一次執行間隔固定的延遲時間。
+            animationId = window.setInterval(setTime, 1000 / frameRate);
+        };
+
+        const startButton = document.getElementById('play');
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        startButton.addEventListener('click', play, false);
+
+        const stopButton = document.getElementById('pause');
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        stopButton.addEventListener('click', stop, false);
+
+        // 更新訊息(自訂方法)
+        updateInfo();
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wms-time.html">官方範例</a>
+</body>
+
+</html>

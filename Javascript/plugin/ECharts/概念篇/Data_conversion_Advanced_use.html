@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數據轉換的進階使用</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 数据转换器 "filter"
+        // 指定图表的配置项和数据
+        option = {
+            // 數據
+            dataset: [
+                {
+                    // 提供一份数据。
+                    source: [
+                        ['Product', 'Sales', 'Price', 'Year'],
+                        ['Cake', 123, 32, 2011],
+                        ['Latte', 231, 14, 2011],
+                        ['Tofu', 235, 5, 2011],
+                        ['Milk Tee', 341, 25, 2011],
+                        ['Porridge', 122, 29, 2011],
+                        ['Cake', 143, 30, 2012],
+                        ['Latte', 201, 19, 2012],
+                        ['Tofu', 255, 7, 2012],
+                        ['Milk Tee', 241, 27, 2012],
+                        ['Porridge', 102, 34, 2012],
+                        ['Cake', 153, 28, 2013],
+                        ['Latte', 181, 21, 2013],
+                        ['Tofu', 395, 4, 2013],
+                        ['Milk Tee', 281, 31, 2013],
+                        ['Porridge', 92, 39, 2013],
+                        ['Cake', 223, 29, 2014],
+                        ['Latte', 211, 17, 2014],
+                        ['Tofu', 345, 3, 2014],
+                        ['Milk Tee', 211, 35, 2014],
+                        ['Porridge', 72, 24, 2014]
+                    ]
+                },
+                {
+                    // 轉換
+                    transform: {
+                        // 篩選條件
+                        type: 'filter',
+                        // config 配置 { key(source第一行):value(source第一行之後)}
+                        config: { dimension: 'Year', '=': 2011 }
+                        // 这个筛选条件表示，遍历数据，筛选出维度（ dimension ）
+                        // 'Year' 上值为 2011 的所有数据项。
+                    }
+                }
+            ],
+            // 系列設定（系列的資料）設定資料
+            series: {
+                // 圓型圖
+                type: 'pie',
+                // 这个饼图系列，引用了 index 为 `1` 的 dataset 。也就是，引用了上述
+                // 2011 年那个 "filter" transform 的结果。
+                datasetIndex: 1
+            }
+        };
+        //#endregion
+
+        //#region 数据转换器 "sort"
+        // 指定图表的配置项和数据
+        option2 = {
+            // 數據
+            dataset: [
+                {
+                    // 用 dimensions 指定了维度的顺序。直角坐标系中，如果 X 轴 type 为 category，
+                    // 默认把第一个维度映射到 X 轴上，后面维度映射到 Y 轴上。
+                    // 如果不指定 dimensions，也可以通过指定 series.encode
+                    // 完成映射，参见后文。
+                    dimensions: ['name', 'age', 'profession', 'score', 'date'],
+                    // 提供一份数据。
+                    source: [
+                        ['Hannah Krause', 41, 'Engineer', 314, '2011-02-12'],
+                        ['Zhao Qian', 20, 'Teacher', 351, '2011-03-01'],
+                        ['Jasmin Krause ', 52, 'Musician', 287, '2011-02-14'],
+                        ['Li Lei', 37, 'Teacher', 219, '2011-02-18'],
+                        ['Karle Neumann', 25, 'Engineer', 253, '2011-04-02'],
+                        ['Adrian Groß', 19, 'Teacher', '-', '2011-01-16'],
+                        ['Mia Neumann', 71, 'Engineer', 165, '2011-03-19'],
+                        ['Böhm Fuchs', 36, 'Musician', 318, '2011-02-24'],
+                        ['Han Meimei', 67, 'Engineer', 366, '2011-03-12']
+                    ]
+                },
+                {
+                    // 轉換
+                    transform: {
+                        // 類型
+                        type: 'sort',
+                        // config 配置 { key(source第一行):value(source第一行之後)}
+                        // order: 'desc' 按分数排序
+                        config: { dimension: 'score', order: 'desc' }
+                    }
+                }
+            ],
+            // X座標
+            xAxis: {
+                // category 主座標
+                type: 'category',
+                // axisLabel 軸標籤
+                axisLabel: {
+                    // x刻度配置
+                    // interval 表示全部顯示不間隔
+                    interval: 0, rotate: 50
+                }
+            },
+            // Y座標
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: {
+                // 柱狀圖
+                type: 'bar',
+                // dataset-source 第一行 key:value 第一行:第一行之後的資料
+                encode: { x: 'name', y: 'score' },
+                // 这个饼图系列，引用了 index 为 `1` 的 dataset 。也就是，引用了上述
+                datasetIndex: 1
+            }
+        };
+        //#endregion
+
+        //#region 数据转换器 "sort"-2
+        // 指定图表的配置项和数据
+        option3 = {
+            // 數據
+            dataset: [
+                {
+                    // 用 dimensions 指定了维度的顺序。直角坐标系中，如果 X 轴 type 为 category，
+                    // 默认把第一个维度映射到 X 轴上，后面维度映射到 Y 轴上。
+                    // 如果不指定 dimensions，也可以通过指定 series.encode
+                    // 完成映射，参见后文。
+                    dimensions: ['name', 'age', 'profession', 'score', 'date'],
+                    // 提供一份数据。
+                    source: [
+                        [' Hannah Krause ', 41, 'Engineer', 314, '2011-02-12'],
+                        ['Zhao Qian ', 20, 'Teacher', 351, '2011-03-01'],
+                        [' Jasmin Krause ', 52, 'Musician', 287, '2011-02-14'],
+                        ['Li Lei', 37, 'Teacher', 219, '2011-02-18'],
+                        [' Karle Neumann ', 25, 'Engineer', 253, '2011-04-02'],
+                        [' Adrian Groß', 19, 'Teacher', null, '2011-01-16'],
+                        ['Mia Neumann', 71, 'Engineer', 165, '2011-03-19'],
+                        [' Böhm Fuchs', 36, 'Musician', 318, '2011-02-24'],
+                        ['Han Meimei ', 67, 'Engineer', 366, '2011-03-12']
+                    ]
+                },
+                {
+                    // 轉換
+                    transform: {
+                        // 類型
+                        type: 'sort',
+                        // config 配置 { key(source第一行):value(source第一行之後)}
+                        // order: 'desc' 按分数排序
+                        config: [
+                            { dimension: 'profession', order: 'desc' },
+                            { dimension: 'score', order: 'desc' }
+                        ]
+                    }
+                }
+            ],
+            // X座標
+            xAxis: {
+                // category 主座標
+                type: 'category',
+                // axisLabel 軸標籤
+                axisLabel: {
+                    // x刻度配置
+                    // interval 表示全部顯示不間隔
+                    interval: 0, rotate: 30
+                }
+            },
+            // Y座標
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            series: {
+                // 柱狀圖
+                type: 'bar',
+                // 標籤(標記在柱狀圖裡面)
+                label: {
+                    // 顯示
+                    show: true,
+                    // 旋轉
+                    rotate: 90,
+                    // 位置:底部
+                    position: 'insideBottom',
+                    // 對齊:靠左
+                    align: 'left',
+                    // 垂直對齊:置中
+                    verticalAlign: 'middle'
+                },
+                // 項目樣式
+                itemStyle: {
+                    // 顏色
+                    // data名稱對應的顏色
+                    color: function (params) {
+                        return {
+                            Engineer: '#5470c6',
+                            Teacher: '#91cc75',
+                            Musician: '#fac858'
+                        }[params.data[2]];
+                    }
+                },
+                // dataset-source 第一行 key:value 第一行:第一行之後的資料
+                encode: { x: 'name', y: 'score', label: ['profession'] },
+                // 这个饼图系列，引用了 index 为 `1` 的 dataset 。也就是，引用了上述
+                datasetIndex: 1
+            }
+        };
+        //#endregion
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option3);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/concepts/data-transform">官網範例連結</a>
+</body>
+
+</html>

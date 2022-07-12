@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查詢要素圖層（空間）</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 要素圖層查詢和編輯助手 -->
+    <script src="Js/feature-layer.umd.min.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>查詢要素圖層（空間）</h1>
+    <h4>了解如何執行空間查詢以訪問多邊形特徵從一個特色服務.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>一個要素層可以包含大量特徵存儲在ArcGIS. 要訪問這些功能的子集，您可以一起或單獨執行 SQL 或空間查詢。結果可以包含屬性,幾何學，或兩者都用於每條記錄。當要素圖層非常大並且您只想訪問其數據的子集時，SQL 和空間查詢非常有用。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-118.805, 34.027]),
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Streets";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, basemapURL).then(function (map) {
+            // 在客戶端呈現的矢量數據。
+            const parcelLayer = new ol.layer.Vector({
+                // 來源: 為矢量圖層提供特徵源。
+                source: new ol.source.Vector(),
+                // 風格
+                style: new ol.style.Style({
+                    // 筆劃(邊框)風格。
+                    stroke: new ol.style.Stroke({
+                        // 顏色： 黑色
+                        color: "black"
+                    }),
+                    // 填充樣式。
+                    fill: new ol.style.Fill({
+                        // 顏色: 藍色
+                        // hsl(色相(註: 顏色), 飽和, 亮度)
+                        color: "hsl(200,80%,50%)"
+                    })
+                })
+            });
+
+            // 在客戶端呈現的矢量數據。
+            const interactionLayer = new ol.layer.Vector({
+                // 來源: 為矢量圖層提供特徵源。
+                source: new ol.source.Vector()
+            });
+
+            // 加入塗層
+            map.addLayer(parcelLayer);
+            // 加入塗層
+            map.addLayer(interactionLayer);
+
+            // 繪製特徵幾何圖形的交互。
+            const drawInteraction = new ol.interaction.Draw({
+                // 來源: 繪製要素的目標源。
+                source: interactionLayer.getSource(),
+                // 使用此實例繪製的幾何圖形的幾何類型。: 多邊形
+                type: "Polygon",
+                // 停止在繪圖期間觸發單擊、單擊和雙擊事件。
+                stopClick: true // 不要觸發“點擊”事件（稍後需要）
+            });
+
+            // 將給定的交互添加到地圖。
+            map.addInteraction(drawInteraction);
+
+            // 在特徵繪製結束時觸發
+            drawInteraction.on("drawend", (e) => {
+                // ol.format.EsriJSON() 以 EsriJSON 格式讀取和寫入數據的特徵格式。
+                // writeFeatureObject(特徵, opt_options) 將特徵編碼為 esriJSON 特徵對象。
+                const feature = new ol.format.EsriJSON().writeFeatureObject(e.feature, {
+                    // 將由格式編寫器序列化的特徵幾何的投影。(座標系統)
+                    // getView() 獲取與此地圖關聯的視圖。
+                    // getProjection() 獲取視圖投影。
+                    featureProjection: map.getView().getProjection()
+                });
+
+                // 自訂方法
+                executeQuery(feature.geometry);
+
+                // 激活或停用交互。
+                drawInteraction.setActive(false);
+            });
+
+            //#region executeQuery [ SQl查詢 ]
+            /**
+             * SQl查詢
+             * @param {number} geometry 幾何學
+             * @returns {void}
+             */
+            function executeQuery(geometry) {
+                // 查詢要素服務。
+                arcgisRest.queryFeatures({
+                    // 網址
+                    url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/LA_County_Parcels/FeatureServer/0",
+                    // 幾何學
+                    geometry: geometry,
+                    // 幾何學類型: 多邊形
+                    geometryType: "esriGeometryPolygon",
+                    // 用於比較輸入幾何的空間關係: 空間相對相交
+                    spatialRel: "esriSpatialRelIntersects",
+                    // 響應格式。
+                    f: "json",
+                    // 返回幾何
+                    returnGeometry: true
+                })
+                // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+                .then((response) => {
+                    // ol.format.EsriJSON() 以 EsriJSON 格式讀取和寫入數據的特徵格式。
+                    // readFeatures(來源，opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                    const features = new ol.format.EsriJSON().readFeatures(response);
+                    // 讀取圖層來源，並加入特徵
+                    // getSource() 讀取來源
+                    // addFeatures(features) 加入特徵
+                    parcelLayer.getSource().addFeatures(features);
+                });
+
+            }
+            //#endregion
+
+            // 產生一個彈跳視窗
+            const popup = new Popup();
+            // 將給定的疊加層添加到地圖中。
+            map.addOverlay(popup);
+
+            // 無需拖動即可單擊。雙擊將觸發其中兩個。
+            map.on("click", (event) => {
+                // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+                let parcel = map.getFeaturesAtPixel(event.pixel, {
+                    // 圖層過濾器(註: 判斷圖層名稱 === 指定的圖層名稱)
+                    layerFilter: (l) => l === parcelLayer
+                })[0];
+
+                // 判斷是否有值
+                if (parcel) {
+                    // 用戶單擊包裹以查看有關它的更多信息
+                    // 設定彈跳視窗的內容
+                    const message =
+                        `<b>Parcel ${parcel.get("APN")}</b>` +
+                        `<br>Type: ${parcel.get("UseType")} <br>` +
+                        `Land value: ${parcel.get("Roll_LandValue")} <br>` +
+                        `Tax Rate City: ${parcel.get("TaxRateCity")}`;
+                    // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                    popup.show(event.coordinate, message);
+                    // 停止繪製而不將草圖特徵添加到目標圖層。
+                    drawInteraction.abortDrawing();
+                } else {
+                    // 用戶點擊地圖上的其他地方進行重置
+                    // 隱藏視窗
+                    popup.hide();
+                    // getSource() 讀取來源
+                    // clear() 從源中刪除所有功能
+                    parcelLayer.getSource().clear();
+                    // getSource() 讀取來源
+                    // clear() 從源中刪除所有功能
+                    interactionLayer.getSource().clear();
+                    // 激活或停用交互。
+                    drawInteraction.setActive(true);
+                }
+            });
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/query-and-edit/query-a-feature-layer-spatial/">官方範例</a>
+</body>
+</html>

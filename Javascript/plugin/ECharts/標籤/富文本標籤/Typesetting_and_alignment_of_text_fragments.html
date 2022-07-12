@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文本片段的排版和對齊</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    /*
+    关于排版方式，每个文本片段，可以想象成 CSS 中的 inline-block，在文档流中按行放置。
+
+    每个文本片段的内容盒尺寸（content box size），默认是根据文字大小决定的。但是，也可以设置 width、height 来强制指定，虽然一般不会这么做（参见下文）。文本片段的边框盒尺寸（border box size），由上述本身尺寸，加上文本片段的 padding 来得到。
+
+    只有 '\n' 是换行符，能导致换行。
+
+    一行内，会有多个文本片段。每行的实际高度，由 lineHeight 最大的文本片段决定。文本片段的 lineHeight 可直接在 rich 中指定，也可以在 rich 的父层级中统一指定而采用到 rich 的所有项中，如果都不指定，则取文本片段的边框盒尺寸（border box size）。
+
+    在一行的 lineHeight 被决定后，一行内，文本片段的竖直位置，由文本片段的 verticalAlign 来指定（这里和 CSS 中的规则稍有不同）：
+
+    'bottom'：文本片段的盒的底边贴住行底。
+    'top'：文本片段的盒的顶边贴住行顶。
+    'middle'：居行中。
+    文本块的宽度，可以直接由文本块的 width 指定，否则，由最长的行决定。宽度决定后，在一行中进行文本片段的放置。文本片段的 align 决定了文本片段在行中的水平位置：
+
+    首先，从左向右连续紧靠放置 align 为 'left' 的文本片段盒。
+    然后，从右向左连续紧靠放置 align 为 'right' 的文本片段盒。
+    最后，剩余的没处理的文本片段盒，紧贴着，在中间剩余的区域中居中放置。
+    关于文字在文本片段盒中的位置：
+
+    如果 align 为 'center'，则文字在文本片段盒中是居中的。
+    如果 align 为 'left'，则文字在文本片段盒中是居左的。
+    如果 align 为 'right'，则文字在文本片段盒中是居右的。
+    */
+
+    //#region 指定图表的配置项和数据
+    option = {
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          // 散點圖
+          type: 'scatter',
+          // 數據
+          data: [
+            {
+              // [x,y] 座標
+              value: [0, 0],
+              // 標籤
+              label: {
+                // 正常
+                normal: {
+                  // 標籤內容格式器，支持字符串模板和回調函數兩種形式，字符串模板與回調函數返回的字符串均支持用 \n 換行。
+                  // {a}：系列名。
+                  // {b}：数据名。
+                  // {c}：数据值。
+                  // {@xxx}：数据中名为 'xxx' 的维度的值，如 {@product} 表示名为 'product' 的维度的值。
+                  // {@[n]}：数据中维度 n 的值，如 {@[3]} 表示维度 3 的值，从 0 开始计数。
+                  // .join(要填的值) 抓取陣列的值 並用 要填的值作為間隔
+                  formatter: [
+                    '{tc|Center Title}{titleBg|}',
+                    '  Content text xxxxxxxx {sunny|} xxxxxxxx {cloudy|}  ',
+                    '{hr|}',
+                    '  xxxxx {showers|} xxxxxxxx  xxxxxxxxx  '
+                  ].join('\n'),
+                  // 在 rich 裡面，可以自定義富文本樣式。利用富文本樣式，可以在標籤中做出非常豐富的效果。
+                  rich: {
+                    // 對應 formatter的 titleBg
+                    titleBg: {
+                      // 對齊:右邊
+                      align: 'right'
+                    }
+                  }
+                }
+              }
+            },
+            {
+              // [x,y] 座標
+              value: [0, 1],
+              // 標籤
+              label: {
+                // 正常
+                normal: {
+                  // 標籤內容格式器，支持字符串模板和回調函數兩種形式，字符串模板與回調函數返回的字符串均支持用 \n 換行。
+                  // {a}：系列名。
+                  // {b}：数据名。
+                  // {c}：数据值。
+                  // {@xxx}：数据中名为 'xxx' 的维度的值，如 {@product} 表示名为 'product' 的维度的值。
+                  // {@[n]}：数据中维度 n 的值，如 {@[3]} 表示维度 3 的值，从 0 开始计数。
+                  // .join(要填的值) 抓取陣列的值 並用 要填的值作為間隔
+                  formatter: [
+                    '{titleBg|Left Title}',
+                    '  Content text xxxxxxxx {sunny|} xxxxxxxx {cloudy|}  ',
+                    '{hr|}',
+                    '  xxxxx {showers|} xxxxxxxx  xxxxxxxxx  '
+                  ].join('\n')
+                }
+              }
+            },
+            {
+              // [x,y] 座標
+              value: [0, 2],
+              // 標籤
+              label: {
+                // 正常
+                normal: {
+                  // 標籤內容格式器，支持字符串模板和回調函數兩種形式，字符串模板與回調函數返回的字符串均支持用 \n 換行。
+                  // {a}：系列名。
+                  // {b}：数据名。
+                  // {c}：数据值。
+                  // {@xxx}：数据中名为 'xxx' 的维度的值，如 {@product} 表示名为 'product' 的维度的值。
+                  // {@[n]}：数据中维度 n 的值，如 {@[3]} 表示维度 3 的值，从 0 开始计数。
+                  // .join(要填的值) 抓取陣列的值 並用 要填的值作為間隔
+                  formatter: [
+                    '{titleBg|Right Title}',
+                    '  Content text xxxxxxxx {sunny|} xxxxxxxx {cloudy|}  ',
+                    '{hr|}',
+                    '  xxxxx {showers|} xxxxxxxx  xxxxxxxxx  '
+                  ].join('\n'),
+                  // 在 rich 裡面，可以自定義富文本樣式。利用富文本樣式，可以在標籤中做出非常豐富的效果。
+                  rich: {
+                    // 對應 formatter的 titleBg
+                    titleBg: {
+                      // 對齊:右邊
+                      align: 'right'
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          // 符號大小
+          symbolSize: 1,
+          // 標籤
+          label: {
+            // 正常
+            normal: {
+              // 展示
+              show: true,
+              // 背景顏色
+              backgroundColor: '#ddd',
+              // 邊框顏色
+              borderColor: '#555',
+              // 邊框寬度
+              borderWidth: 1,
+              // 邊界半徑(四角弧度)
+              borderRadius: 5,
+              // 字體顏色
+              color: '#000',
+              // 字體大小
+              fontSize: 14,
+              // 在 rich 裡面，可以自定義富文本樣式。利用富文本樣式，可以在標籤中做出非常豐富的效果。
+              rich: {
+                // 對應 formatter的 titleBg
+                titleBg: {
+                  // 背景顏色
+                  backgroundColor: '#000',
+                  // 高度
+                  height: 30,
+                  // 邊界半徑(四角弧度)
+                  borderRadius: [5, 5, 0, 0],
+                  // 內距的設定
+                  padding: [0, 10, 0, 10],
+                  // 寬度
+                  width: '100%',
+                  // 字體顏色
+                  color: '#eee'
+                },
+                // 對應 formatter的 tc
+                tc: {
+                  // 對齊:置中
+                  align: 'center',
+                  // 字體顏色
+                  color: '#eee'
+                },
+                // 對應 formatter的 hr
+                hr: {
+                  // 邊框顏色
+                  borderColor: '#777',
+                  // 寬度
+                  width: '100%',
+                  //邊框寬度
+                  borderWidth: 0.5,
+                  // 高度
+                  height: 0
+                },
+                // 對應 formatter的 sunny
+                sunny: {
+                  // 高度
+                  height: 30,
+                  // 對齊:左邊
+                  align: 'left',
+                  // 背景顏色
+                  backgroundColor: {
+                    // 圖片:連結
+                    image:
+                      'https://echarts.apache.org/examples/data/asset/img/weather/sunny_128.png'
+                  }
+                },
+                // 對應 formatter的 cloudy
+                cloudy: {
+                  // 高度
+                  height: 30,
+                  // 對齊:左邊
+                  align: 'left',
+                  // 背景顏色
+                  backgroundColor: {
+                    // 圖片:連結
+                    image:
+                      'https://echarts.apache.org/examples/data/asset/img/weather/cloudy_128.png'
+                  }
+                },
+                // 對應 formatter的 showers
+                showers: {
+                  // 高度
+                  height: 30,
+                  // 對齊:左邊
+                  align: 'left',
+                  // 背景顏色
+                  backgroundColor: {
+                    // 圖片:連結
+                    image:
+                      'https://echarts.apache.org/examples/data/asset/img/weather/showers_128.png'
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      // X座標
+      xAxis: {
+        // 隱藏
+        show: false,
+        // 最小值
+        min: -1,
+        // 最大值
+        max: 1
+      },
+      // 對應 formatter的
+      yAxis: {
+        // 隱藏
+        show: false,
+        // 最小值
+        min: 0,
+        // 最大值
+        max: 2,
+        // 是否是反向坐标轴。
+        inverse: true
+      }
+    };
+    //#endregion
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/label/rich-text">官網範例連結</a>
+</body>
+
+</html>

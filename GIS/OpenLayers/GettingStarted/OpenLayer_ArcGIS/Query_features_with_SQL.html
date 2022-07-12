@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用 SQL查詢功能</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- 要素圖層查詢和編輯助手 -->
+    <script src="Js/feature-layer.umd.min.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+    #query-select {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 4px 8px;
+        font-size: 16px;
+        border-radius: 0; /* Causes more uniform appearance across browsers. */
+    }
+</style>
+<body>
+    <h1>使用 SQL查詢功能</h1>
+    <h4>了解如何執行 SQL 查詢以訪問多邊形特徵從一個要素層.</h4>
+    <div id="map" class="map"></div>
+    <select id="query-select">
+        <option value="" selected>Choose a WHERE clause...</option>
+        <option value="UseType = 'Residential'">UseType = 'Residential'</option>
+        <option value="UseType = 'Government'">UseType = 'Government'</option>
+        <option value="UseType = 'Irrigated Farm'">UseType = 'Irrigated Farm'</option>
+        <option value="TaxRateArea = 10853">TaxRateArea = 10853</option>
+        <option value="TaxRateArea = 10860">TaxRateArea = 10860</option>
+        <option value="TaxRateArea = 08637">TaxRateArea = 08637</option>
+        <option value="Roll_LandValue > 1000000">Roll_LandValue &gt; 1000000</option>
+        <option value="Roll_LandValue < 1000000">Roll_LandValue &lt; 1000000</option>
+    </select>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>一個要素層可以包含大量特徵存儲在ArcGIS. 要訪問要素的子集，您可以執行 SQL 或空間查詢，或同時執行兩者。您還可以返回屬性，幾何學，或每條記錄的屬性和幾何。當要素圖層非常大並且您只想訪問數據的子集時，SQL 和空間查詢非常有用。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([-118.805, 34.027]),
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Streets";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 在客戶端呈現的矢量數據。
+        const parcelLayer = new ol.layer.Vector();
+
+        // 加入圖層
+        olms(map, basemapURL).then((map) => {
+            // 加入圖層
+            map.addLayer(parcelLayer);
+
+        });
+
+        //#region executeQuery [ SQl查詢 ]
+        /**
+         * SQl查詢
+         * @param {number} whereClause 條件子句
+         * @param {number} geometry 幾何學
+         * @returns {void}
+         */
+        function executeQuery(whereClause, geometry) {
+            // 查詢要素服務。
+            arcgisRest.queryFeatures({
+                // 網址
+                url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/LA_County_Parcels/FeatureServer/0",
+                // 幾何學
+                geometry: geometry,
+                // 幾何學類型: 信封
+                geometryType: "esriGeometryEnvelope",
+                // 座標系統
+                inSR: 4326, // EPSG:4326 使用緯度和經度
+                // 用於比較輸入幾何的空間關係: 空間相對相交
+                spatialRel: "esriSpatialRelIntersects",
+                // 查詢的 where 子句。
+                where: whereClause,
+                // 響應格式。
+                f: "geojson",
+                // 返回幾何
+                returnGeometry: true,
+                // 要包含在響應中的屬性字段。
+                outFields: ["APN", "UseType", "TaxRateCity", " Roll_LandValue"] // 要返回的屬性
+            })
+            // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+            .then((response) => {
+                // 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                const geojson = new ol.format.GeoJSON({
+                    // 默認座標系統
+                    dataProjection: "EPSG:4326",
+                    // 按格式讀取或寫入的特徵的投影
+                    featureProjection: "EPSG:3857"
+                });
+
+                // 為矢量圖層提供特徵源。
+                let newSource = new ol.source.Vector({
+                    // 特徵: 閱讀所有功能。適用於單個特徵和特徵集合。
+                    features: geojson.readFeatures(response)
+                });
+                // 設置圖層來源。
+                parcelLayer.setSource(newSource);
+            });
+        }
+        //#endregion
+
+        // 抓取下拉式選單標籤
+        const select = document.getElementById("query-select");
+        // change 發生變化時
+        // addEventListener 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        select.addEventListener("change", () => {
+            // 儲存下拉式選單的值
+            const whereClause = select.value;
+            // getView 獲取與此地圖關聯的視圖。
+            // calculateExtent 計算當前視圖狀態的範圍和傳遞的大小。
+            // getSize 獲取此地圖的大小。
+            const extent3857 = map.getView().calculateExtent(map.getSize());
+            // ol.proj.transformExtent(範圍, 來源, 目標, opt_stops) 將範圍從源投影轉換為目標投影。
+            const extent4326 = ol.proj.transformExtent(extent3857, "EPSG:3857", "EPSG:4326");
+            // SQL查詢(自訂方法)
+            executeQuery(whereClause, extent4326);
+        });
+
+        // 產生一個彈跳視窗
+        const popup = new Popup();
+        // 將給定的疊加層添加到地圖中。
+        map.addOverlay(popup);
+
+        // 無需拖動即可單擊。雙擊將觸發其中兩個。
+        map.on("click", (event) => {
+            // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+            const parcel = map.getFeaturesAtPixel(event.pixel, {
+                // 圖層過濾器(註: 判斷圖層名稱 === 指定的圖層名稱)
+                layerFilter: (l) => l === parcelLayer // 不要從底圖中查詢圖層
+            })[0];
+
+            // 判斷是否有值
+            if (parcel) {
+                // 設定彈跳視窗的內容
+                const message =
+                    `<b>Parcel ${parcel.get("APN")}</b>` +
+                    `<br>Type: ${parcel.get("UseType")} <br>` +
+                    `Land value: ${parcel.get("Roll_LandValue")} <br>` +
+                    `Tax Rate City: ${parcel.get("TaxRateCity")}`;
+                // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                popup.show(event.coordinate, message);
+            } else {
+                // 隱藏視窗
+                popup.hide();
+            }
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/query-and-edit/query-a-feature-layer-sql/">官方範例</a>
+</body>
+</html>

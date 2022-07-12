@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> WMTS圖層功能控制</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- jQuery_3.6.0.js -->
+    <script src="js/jQuery_3.6.0.js"></script>
+    <!-- ol-ext 擴充套件 -->
+    <link rel="stylesheet" href="css/ol-ext.css" type="text/css">
+    <script src="js/ol-ext.js"></script>
+    <!-- css ol-ext擴充套件 -->
+    <link rel="stylesheet" href="css/LayerSwitcher_popup.css" type="text/css">
+    <!-- proj4.js 擴充套件-->
+    <script src="js/proj4.js"></script>
+    <!-- filesaver-js -->
+    <script src="js/FileSaver.js"></script>
+
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1> WMTS圖層功能控制</h1>
+    <div class="info">
+        <b>ol/control/WMTSCapabilities</b> 是在 ol 地圖上加載 WMTS 圖層的控件。
+        <br />
+        它顯示一個對話框，以使用服務的 getCapabilities 選擇要添加的服務。
+        <br />
+        某些服務可能無法正確響應，因為
+        <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">CORS 政策</a>
+        並且您可能必須使用代理來訪問獲取功能...
+        <br />
+        偵聽 <i>加載</i> 事件以獲取所選圖層或創建它的選項。
+        <br />
+        查看要插入到代碼中的圖層定義的控制台。
+    </div>
+    <div id="map" class="map"></div>
+    <div class="options">
+        <ul>
+            <li>
+                url:
+                <input id="url" type="text" value="https://wxs.ign.fr/cartes/geoportail/wmts" />
+                <!-- showDialog([url], options) 顯示 url 對話框 -->
+                <button onclick="cap.showDialog($('#url').val())">搜索</button>
+            </li>
+            <li>
+                Services :
+                <!-- showDialog([url], options) 顯示 url 對話框 -->
+                <button onclick="cap.showDialog('https://wxs.ign.fr/cartes/geoportail/wmts'); ">地理門戶地圖</button>
+                <!-- showDialog([url], options) 顯示 url 對話框 -->
+                <button onclick="cap.showDialog('https://wxs.ign.fr/clc/geoportail/wmts'); ">科林土地覆蓋</button>
+            </li>
+        </ul>
+        <button onclick="exportCarte()" style="display: none;">exportCarte</button>
+    </div>
+    <script type="text/javascript">
+        // http 服務加載在 http 上
+        // location.protocol 是一個可讀可寫的字符串，可設置或返回當前 URL 的協議。
+        // /^正則表達式/test(字串) 執行一個檢索，展示正則表達式與指定的字符串是否匹配。返回true或false。
+        if (location.protocol === 'https:' && !/^localhost/.test(location.host)) {
+            // window.location.href 改變 url網址
+            // replace(原字串, 新字串) 傳回一個新字串，此新字串是透過將原字串與 pattern 比對，以 replacement 取代吻合處而生成。
+            location.href = window.location.href.replace(/^https:/, 'http:');
+        }
+
+        // 定義 proj4 2154
+        // 首先定義坐標系統的參數(這些內容包含使用大地框架、橢球、投影等)，proj4轉換是根據這些參數
+        proj4.defs("EPSG:2154", "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+        // 判斷 proj4是否有設置
+        // ol.proj.proj4.register 使在 proj4 (with proj4.defs()) 中定義的投影在 OpenLayers 中可用。
+        if (ol.proj.proj4 && ol.proj.proj4.register) ol.proj.proj4.register(proj4);
+
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 視圖縮放等級
+                zoom: 15,
+                // 地圖中心地點:[經度,緯度]
+                center: [261204.43490751847, 6250258.191535994]
+            }),
+            // 最初添加到地圖的交互。: 默認情況下包含在地圖中的一組交互。
+            interactions: ol.interaction.defaults(),
+            // 這裡是宣告圖層陣列
+            layers: []
+        });
+
+        // 圖層控制
+        // addControl 將給定的控件添加到地圖。
+        // ol.control.LayerSwitcher 層切換器控制。
+        map.addControl(new ol.control.LayerSwitcher({
+            // 添加垃圾桶按鈕刪除圖層，默認為false
+            trash: true,
+            // 添加範圍按鈕以縮放到圖層的範圍
+            extent: true,
+            // 在開始時折疊 layerswitcher，默認為 true
+            collapsed: false
+        }));
+
+        // ol.control.Permalink 設置將用戶返回到當前地圖視圖的超鏈接。
+        var plink = new ol.control.Permalink({
+            // 隱藏地圖上的按鈕，默認為 true
+            visible: false,
+            // 將當前地圖視圖保存在 localStorage 中，如果 'position' 僅存儲地圖位置
+            localStorage: 'position'
+        });
+
+        // 將給定的控件添加到地圖。
+        map.addControl(plink);
+        // 搜索提名
+        // addControl 將給定的控件添加到地圖。
+        // ol.control.SearchNominatim  使用 OpenStreetmap項目中的 Nominatim地理編碼器搜索地點。
+        map.addControl(new ol.control.SearchNominatim({
+            // 縮放選擇
+            zoomOnSelect: 13
+        }));
+
+        // ol.control.WMTSCapabilities  WMTS功能
+        var cap = new ol.control.WMTSCapabilities({
+            // target: $('.options').get(0),
+            // 設置對話框的目標，使用 document.body 有全窗口對話框
+            target: document.body,
+            // 支持的 srs數組、默認地圖投影代碼或“EPSG:3857”
+            srs: ['EPSG:2154'],
+            // 使用 CORS，默認 false  跨來源資源共用
+            cors: true,
+            // 用於在菜單中快速訪問的服務的鍵/url 對象
+            services: {
+                'Géoportail-cartes': 'https://wxs.ign.fr/cartes/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-ortho': 'https://wxs.ign.fr/ortho/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-orthohisto': 'https://wxs.ign.fr/orthohisto/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-satellite': 'https://wxs.ign.fr/satellite/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-cartovecto': 'https://wxs.ign.fr/cartovecto/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-economie': 'https://wxs.ign.fr/economie/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-environnement': 'https://wxs.ign.fr/environnement/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-sol': 'https://wxs.ign.fr/sol/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-parcellaire': 'https://wxs.ign.fr/parcellaire/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-transports': 'https://wxs.ign.fr/transports/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-administratif': 'https://wxs.ign.fr/administratif/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-altimetrie': 'https://wxs.ign.fr/altimetrie/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-agriculture': 'https://wxs.ign.fr/agriculture/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities',
+                'Géoportail-CLC': 'https://wxs.ign.fr/clc/geoportail/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetCapabilities'
+            },
+            // 在控制台中顯示跟踪
+            trace: true
+        });
+        // 將給定的控件添加到地圖。
+        map.addControl(cap);
+
+        // 加載
+        cap.on('load', function (e) {
+            // 將給定的圖層添加到此地圖的頂部。
+            map.addLayer(e.layer);
+            // set(key, value, opt_silent(註:更新而不觸發事件。選擇性參數)) 設置一個值。
+            // legend 說明
+            e.layer.set('legend', e.options.data.legend);
+            // setUrlParam(key, value) 給 url 設置一個參數。
+            plink.setUrlParam('url', e.options.source.url);
+            plink.setUrlParam('layer', e.options.source.layer);
+        });
+
+        // 永久鏈接
+        // getUrlParam(key) 獲取參數 url。
+        var url = plink.getUrlParam('url');
+        // getUrlParam(key) 獲取參數 url。
+        var layerName = plink.getUrlParam('layer');
+        if (url) {
+            console.log(layerName)
+            // loadLayer(url, layername [, 回調函數(註:可選)]) 使用服務加載圖層
+            cap.loadLayer(url, layerName);
+        }
+        else {
+            // addLayer 將給定的圖層添加到此地圖的頂部。
+            // ol.layer.Tile 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+            map.addLayer(new ol.layer.Tile({
+                // 顯示的圖層名稱(展示)
+                name: "OSM",
+                // 來源: OpenStreetMap切片服務器的圖層源。
+                source: new ol.source.OSM()
+            }));
+        }
+
+        /* 導出 .carte 文件 */
+        // 出口單
+        function exportCarte() {
+            // ol.proj.toLonLat（坐標，opt_projection） 將坐標轉換為經度/緯度。
+            // getView 獲取與此地圖關聯的視圖。視圖管理諸如中心和分辨率之類的屬性。
+            // getCenter 獲取視圖中心。
+            var lonlat = ol.proj.toLonLat(map.getView().getCenter());
+            var carte = {
+                // 參數
+                "param": {
+                    // 經度
+                    "lon": lonlat[0],
+                    // 緯度
+                    "lat": lonlat[1],
+                    "rot": 0,
+                    // 視圖縮放等級
+                    // getView 獲取與此地圖關聯的視圖。視圖管理諸如中心和分辨率之類的屬性。
+                    // getZoom 獲取當前縮放級別。
+                    "zoom": map.getView().getZoom(),
+                    "titre": "WMS",
+                    // 描述
+                    "description": ""
+                },
+                // 這裡是宣告圖層陣列
+                "layers": []
+            }
+            // getLayers 獲取與此地圖關聯的圖層集合。
+            // getArray 獲取對底層 Array對象的引用。
+            map.getLayers().getArray().forEach(function (l) {
+                // get(key) 獲取一個值。
+                if (l.get('WMS')) {
+                    // push(元素) 在集合的末尾插入提供的元素。
+                    carte.layers.push({
+                        "wms": true,
+                        // 類型
+                        "type": "WMS",
+                        // get(key) 獲取一個值。
+                        "name": l.get('title'),
+                        // 標題: get(key) 獲取一個值。
+                        "titre": l.get('title'),
+                        // 能見度: 返回圖層的可見性（true或false）。
+                        "visibility": l.getVisible(),
+                        // 透明度: 返回圖層的不透明度（介於 0 和 1 之間）。
+                        "opacity": l.getOpacity(),
+                        // 版權:
+                        // getSource 獲取圖層源。
+                        // getAttributions 獲取源的歸因函數。
+                        // &copy; 特殊符號
+                        "copyright": l.getSource().getAttributions()()[0] || '&copy;',
+                        // WMS參數
+                        "wmsparam": {
+                            // 圖層
+                            "layer": {
+                                // 標題: get(key) 獲取一個值。
+                                "title": l.get('title'),
+                                // 範圍: 範圍: get(key) 獲取一個值。
+                                "extent": l.get('extent'),
+                                // 最小分辨率: 返回圖層的最小分辨率。
+                                "minResolution": l.getMinResolution(),
+                                // 最大分辨率: 返回圖層的最大分辨率。
+                                "maxResolution": l.getMaxResolution()
+                            },
+                            // 來源
+                            "source": {
+                                // getSource 獲取圖層源。
+                                // getUrls返回用於此源的 URL。
+                                "url": l.getSource().getUrls()[0],
+                                // 座標系統
+                                "projection": "EPSG:3857",
+                                // crossOrigin加載圖像的屬性。
+                                "crossOrigin": "anonymous",
+                                // 參數
+                                "params": {
+                                    // getSource 獲取圖層源。
+                                    // getParams 獲取用戶提供的參數，即那些通過“params”選項傳遞給構造函數的參數，並且可能使用 updateParams 方法進行更新。
+                                    "LAYERS": l.getSource().getParams().LAYERS,
+                                    "FORMAT": l.getSource().getParams().FORMAT,
+                                    "VERSION": l.getSource().getParams().VERSION,
+                                    "MAP": l.getSource().getParams().MAP || ''
+                                }
+                            },
+                            // 版權聲明
+                            "attribution": {
+                                // getSource 獲取圖層源。
+                                // getAttributions 獲取源的歸因函數。
+                                "html": l.getSource().getAttributions()()[0] || '&copy;'
+                            },
+                            "originator": [],
+                            // 說明
+                            "legend": []
+                        },
+                        // 最大縮放集群
+                        "maxZoomCluster": 20,
+                        // 半徑簇
+                        "radiusCluster": 40
+                    })
+                }
+            });
+            // Blob 交互以剪輯 Blob中的圖層
+            var blob = new Blob(
+                // JSON.stringify將 JavaScript 值轉換為 JSON 字符串，如果指定了替換器函數，則可以選擇替換值，或者如果指定了替換器數組，則可以選擇僅包含指定的屬性。
+                // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#issue_with_plain_json.stringify_for_use_as_javascript
+                [
+                    JSON.stringify(carte, null, ' ')
+                ],
+                { type: 'text/plain;charset=utf-8' }
+            );
+            // saveAs(保存的數據, 保存的類型) 文件保存
+            saveAs(blob, 'carte.carte');
+        }
+    </script>
+    <br><a
+        href="http://viglino.github.io/ol-ext/examples/layer/map.wmtscapabilities.html?lon=2.346439&lat=48.854790&z=15">官方範例</a>
+</body>
+
+</html>

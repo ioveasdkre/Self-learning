@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>縮放級別-分數變焦2</title>
+    
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id="map"></div>
+
+    <!-- 分數變焦 -->
+    <!-- 需將 地球的形狀範例 var map = L.map及 map.setView([0, 0], 0);註解才可執行此範例 -->
+    <!-- Leaflet 1.0.0 中引入的一個特性是分數縮放的概念。在此之前，地圖的縮放級別只能是整數（0、1、2等）；但現在您可以使用小數，如1.5或1.25。
+
+    默認情況下禁用部分縮放。要啟用它，請使用 地圖的zoomSnap選項。該zoomSnap選項的默認值為1（這意味著地圖的縮放級別可以是0、1、2等）。
+
+    如果將 的值設置zoomSnap為0.5，則地圖的有效縮放級別將為0、0.5、1、1.5、2等。
+
+    如果您設置的值為0.1，則地圖的有效縮放級別將為0、0.1、 0.2、0.3、0.4、 等。 -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 最小縮放
+            minZoom: 0,
+            // 最大縮放
+            maxZoom: 1,
+            // 縮放比例
+            zoomSnap: 0.25,
+            // 滑鼠拖曳
+            dragging: false
+        });
+
+        var cartodbAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>';
+
+        // tileLayer(地圖框網址, {})圖層
+        var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: cartodbAttribution
+        }).addTo(map);
+
+        // 控制變焦範例需放置，控制變焦之後
+        // setView([地理坐標], 縮放級別)
+        map.setView([0, 0], 0);
+    </script>
+
+
+    <script>
+        // 如果您有觸摸屏，請捏合縮放
+        // 用鼠標滾輪放大/縮小
+        // 進行框縮放（按住shift鍵盤上的鍵的同時用鼠標拖動）
+        // 使用放大/縮小按鈕
+        // extend 擴展
+        var ZoomViewer = L.Control.extend({
+        // onAdd 再添加(加入)
+		onAdd: function(){
+                // create('標籤', 'class名稱') 新增一筆資料
+                // DomUtil 新增資料使用
+                var container= L.DomUtil.create('div');
+                var gauge = L.DomUtil.create('div');
+                // 寬度
+                container.style.width = '200px';
+                // 背景顏色
+                container.style.background = 'rgba(255,255,255,0.5)';
+                // 文本對齊
+                container.style.textAlign = 'left';
+                map.on('zoomstart zoom zoomend', function(ev){
+                    // innerHTML html內部元素
+                    // getZoom 讀取縮放等級
+                    gauge.innerHTML = 'Zoom level: ' + map.getZoom();
+                })
+                container.appendChild(gauge);
+                return container;
+            }
+        });
+        (new ZoomViewer).addTo(map);
+        // setView([地理坐標], 縮放級別)
+        map.setView([0, 0], 0);
+    </script>
+    <a href="https://leafletjs.com/examples/zoom-levels/">官網範例連結</a>
+</body>
+</html>

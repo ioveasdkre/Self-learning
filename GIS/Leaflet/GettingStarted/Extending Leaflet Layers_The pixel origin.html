@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴展地圖：層-像素原點</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    /* 準備頁面 */
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+
+    #info {
+        position:absolute; 
+        top:0; 
+        right:0; 
+        width: 20em; 
+        height: 7.5em; 
+        background: rgba(255,255,255,.5); 
+        z-index:500; 
+        font: 12px Sans;
+    }
+
+    .crsMarker {
+        border-top: 2px green solid;
+        border-left: 2px green solid;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+    <div id="info"></div>
+
+    <!-- 像素原點 -->
+    <!-- 創建自定義L.Layers 是可能的，但需要更深入地了解 Leaflet 如何定位 HTML 元素。精簡版是：
+    該L.Map容器具有“地圖窗格”，這是<div>秒。
+    L.Layers 是地圖窗格內的 HTML 元素
+    地圖將所有LatLngs轉換為地圖 C​​RS 中的坐標，並從該坐標轉換為絕對“像素坐標”（CRS 的原點與像素坐標的原點相同）
+    當L.Map準備好（有一個中心LatLng和一個縮放級別）時，左上角的絕對像素坐標成為“像素原點”
+    每個L.Layer都根據像素原點和圖層LatLngs的絕對像素坐標從其地圖窗格偏移
+    像素原點在 上的每個zoomend或viewreset事件之後重置L.Map，並且每個L.Layer都必須重新計算其位置（如果需要）
+    平移地圖時不會重置像素原點；相反，整個窗格都重新定位。
+    這可能有點難以理解，因此請考慮以下解釋性地圖： -->
+    <script>
+    
+        var trd = [63.41, 10.41];
+    
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 中心點
+            center: [40, 0],
+            // 縮放等級
+            zoom: 1
+        });
+    
+        // tileLayer(地圖框網址, {})圖層
+        var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            // 可以放入版權資訊的字串，格式為 html
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>'
+        }).addTo(map);
+    
+        // marker([地理坐標]) 標記符號(地圖上標記符號)
+        var marker = L.marker(trd).addTo(map);
+        
+        // getPane 讀取窗格
+        var pane = map.getPane('markerPane')
+        
+        // document.createElement('標籤元素') 可以依指定的標籤名稱（tagName）建立 HTML 元素
+        var paneCorner = document.createElement('div');
+        // 寬度
+        paneCorner.style.width = '12px';
+        // 高度
+        paneCorner.style.height = '12px';
+        // 邊框頂部
+        paneCorner.style.borderTop = '2px red solid';
+        // 左邊框
+        paneCorner.style.borderLeft = '2px red solid';
+        
+        // appendChild 將一個節點添加到指定父節點的子節點列表的末尾。
+        pane.appendChild(paneCorner);
+        
+        // 邊界
+        marker._icon.style.border = '1px solid blue';
+        
+        // marker([地理坐標]) 標記符號(地圖上標記符號)
+        var crsMarker = L.marker( map.unproject([0, 0]), {
+            // L.divIcon 使用給定的選項創建一個實例。
+            icon: L.divIcon({ 
+                className: 'crsMarker',
+                iconAnchor: [0, 0]
+            })
+        } ).addTo(map);
+        
+        // polyline 用於在地圖上繪製折線疊加層的類。
+        // 給定一組地理點和可選的選項對象，實例化折線對象。您可以通過傳遞一組地理點數組來創建Polyline具有多條單獨線 ( MultiPolyline)的對象。
+        var markerOffsetLine = L.polyline([[0, 0], [0, 0]], {color: 'skyblue'}).addTo(map);
+        var iconOffsetLine = L.polyline([[0, 0], [0, 0]], {color: 'blue'}).addTo(map);
+        
+        function info() {
+    
+            // 返回地圖圖層左上角的投影像素坐標（在自定義圖層和疊加實現中很有用）。
+            var pixelOrigin = map.getPixelOrigin();
+            // project 將地理坐標投影到 2D 點中。只接受實際L.LatLng實例，不接受數組。
+            // getZoom 返回地圖視圖的當前縮放級別
+            var markerPixelCoords = map.project(trd, map.getZoom());
+            var markerAnchor = marker.options.icon.options.iconAnchor;
+            var markerOffset = marker._icon._leaflet_pos;
+            
+            // document.getElementById('nameid') 抓取id
+            // innerHTML html內部元素
+            document.getElementById('info').innerHTML = 
+                '<div style="color: green">CRS origin: 0,0</div>' + 
+                '<div style="color: red">px origin: &Delta;' + pixelOrigin.x + ',' + pixelOrigin.y + '</div>' + 
+                '<div style="color: blue">marker px coords:' + markerPixelCoords.x.toFixed(2) + ',' + 
+                // 方法會使用定點小數表示法（fixed-point notation）來格式化數字。
+                markerPixelCoords.y.toFixed(2) + '</div>' + 
+                '<div style="color: blue">marker anchor: &Delta;' + markerAnchor[0] + ',' + markerAnchor[1] + '</div>' +
+                '<div style="color: skyblue">marker pane offset: &Delta;' + markerOffset.x + ',' + markerOffset.y + '</div>';
+            
+            // setLatLngs 用給定的地理點數組替換折線中的所有點。
+            // unproject 給定投影坐標返回相應的 LatLng。的倒數project。
+            markerOffsetLine.setLatLngs([ map.unproject(pixelOrigin), map.unproject(pixelOrigin.add(markerOffset))]);
+
+            // setLatLngs 用給定的地理點數組替換折線中的所有點。
+            // unproject 給定投影坐標返回相應的 LatLng。的倒數project。
+            // 返回從當前點減去給定點的結果。
+            iconOffsetLine.setLatLngs([ map.unproject(pixelOrigin.add(markerOffset)), map.unproject(pixelOrigin.add(markerOffset).subtract(markerAnchor))]);
+        }
+        
+        
+        map.on('load move moveend zoomend viewreset', info)
+        
+        info();
+        
+        
+    </script>
+    <a href="https://leafletjs.com/examples/extending/extending-2-layers.html">官網範例連結</a>
+</body>
+</html>

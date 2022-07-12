@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IGN WMTS 圖層</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+
+    .map {
+        background: white;
+    }
+</style>
+
+<body>
+    <h1>IGN WMTS 圖層</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>在此示例中，顯示了 IGN WMTS 圖層。有關 IGN 的 WMTS 服務的更多信息，請參閱IGN Géoportail API 網頁和Documentation de l'offre de données et
+        services de l'IGN（法語）。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: ol.proj.fromLonLat([5, 45]),
+                // 視圖縮放等級
+                zoom: 5,
+            }),
+        });
+
+        // 決議
+        const resolutions = [];
+        // 矩陣 ID
+        const matrixIds = [];
+        // ol.proj.get(座標系統) 獲取指定代碼的 座標系統對象。
+        const proj3857 = ol.proj.get('EPSG:3857');
+        // 最大分辨率
+        // ol.extent.getWidth(範圍) 獲取範圍的寬度。
+        // getExtent 獲取此平舖網格的範圍（如果已配置）。
+        const maxResolution = ol.extent.getWidth(proj3857.getExtent()) / 256;
+
+        for (let i = 0; i < 20; i++) {
+            // 轉成字串
+            matrixIds[i] = i.toString();
+            // Math.pow(base, exponent) 回傳 base 的 exponent 次方（幂）值，也就是 baseexponent。
+            resolutions[i] = maxResolution / Math.pow(2, i);
+        }
+
+        // 為訪問 WMTS 平鋪圖像服務器的源設置網格模式。
+        const tileGrid = new ol.tilegrid.WMTS({
+            // 對於每個縮放級別，平舖網格原點，即x和y軸相交 ( [z, 0, 0]) 的位置。如果給定，數組長度應與數組長度匹配resolutions，即每個分辨率可以有不同的原點。瓷磚坐標從左到右和向下增加。如果沒有指定，extent或者origin必須提供。
+            origin: [-20037508, 20037508],
+            // 決議。每個分辨率的數組索引需要匹配縮放級別。
+            resolutions: resolutions,
+            // 矩陣 ID。這個數組的長度需要和數組的長度相匹配resolutions。
+            matrixIds: matrixIds,
+        });
+
+        // 有關 IGN API 密鑰的更多信息，請參閱
+        // https://geoservices.ign.fr/blog/2021/01/29/Maj_Cles_Geoservices.html
+
+        // 來自 WMTS 服務器的切片數據的圖層源。
+        const ign_source = new ol.source.WMTS({
+            // 服務的 URL。
+            url: 'https://wxs.ign.fr/choisirgeoportail/geoportail/wmts',
+            // WMTS 功能中公佈的圖層名稱。
+            layer: 'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+            // 矩陣集。
+            matrixSet: 'PM',
+            // 圖像格式。
+            format: 'image/png',
+            // 座標系統
+            projection: 'EPSG:3857',
+            // 瓷磚(圖層)網格。
+            tileGrid: tileGrid,
+            // WMTS 功能中公佈的樣式名稱。
+            style: 'normal',
+            // 版權聲明
+            attributions:
+                '<a href="https://www.ign.fr/" target="_blank">' +
+                '<img src="https://wxs.ign.fr/static/logos/IGN/IGN.gif" title="Institut national de l\'' +
+                'information géographique et forestière" alt="IGN"></a>',
+        });
+
+        // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+        const ign = new ol.layer.Tile({
+            // 來源:
+            source: ign_source,
+        });
+
+        // 將給定的圖層添加到此地圖的頂部。
+        map.addLayer(ign);
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wmts-ign.html">官方範例</a>
+</body>
+
+</html>

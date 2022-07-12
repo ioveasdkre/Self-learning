@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定義圓形命中檢測渲染</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>自定義圓形命中檢測渲染</h1>
+    <div id="map" class="map"></div>
+    <h4>此示例演示瞭如何使用“ol/style/Style”hitDetectionRender 選項函數來檢測指針是否位於特定特徵上。 將指針移到 Columbus Circle 特徵的標籤上，看到只有標籤用於命中檢測。</h4>
+    <script>
+        // center 地圖中心地點:[經度,緯度]
+        // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+        const columbusCircleCoords = ol.proj.fromLonLat([-73.98189, 40.76805]);
+        // 灰色
+        const labelTextStroke = 'rgba(120, 120, 120, 1)';
+        // 圓形文字
+        const labelText = 'Columbus Circle';
+
+        // 指針(滑鼠)覆蓋特徵
+        let pointerOverFeature = null;
+
+        // 渲染標籤文本
+        const renderLabelText = (ctx, x, y, stroke) => {
+            // 填滿樣式:紅色
+            // 屬性指定要使用內部形狀的顏色、漸變或圖案。
+            ctx.fillStyle = 'rgba(255,0,0,1)';
+            // 是 Canvas 2D API 描述畫筆（繪製圖形）顏色或樣式的屬性。
+            ctx.strokeStyle = stroke;
+            // 邊線寬度
+            ctx.lineWidth = 1;
+            // 本文對齊:置中
+            ctx.textAlign = 'center';
+            // 文本基礎線:中間
+            ctx.textBaseline = 'middle';
+            // 字形:粗體 30px 字體樣式
+            ctx.font = `bold 30px verdana`;
+            // 篩選:drop-shadow(位移x, 位移y, 陰影的模糊半徑, 顏色) 該CSS功能適用陰影效果輸入圖像。(註:參數1 2為必須，參數3 4 可選)
+            ctx.filter = 'drop-shadow(7px 7px 2px #e81)';
+            // fillText(文字, X軸, Y軸) Canvas 2D API 的一部分，在指定的坐標處繪製一個文本字符串，並用當前的 fillStyle. 一個可選參數允許指定渲染文本的最大寬度，用戶代理將通過壓縮文本或使用較小的字體大小來實現。
+            ctx.fillText(labelText, x, y);
+            // strokeText(文字, X軸, Y軸) Canvas 2D API 的一部分，在指定坐標處對文本字符串的字符進行描邊（即，繪製其輪廓）。
+            ctx.strokeText(labelText, x, y);
+        };
+
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const circleFeature = new ol.Feature({
+            // 特徵的默認幾何:圓形幾何。
+            // ol.geom.Circle(中心(座標), 半徑,佈局(註:選填))
+            geometry: new ol.geom.Circle(columbusCircleCoords, 50),
+        });
+
+        // set(key, value, opt_silent(註:更新而不觸發事件。)) 設置一個值。
+        circleFeature.set('label-color', labelTextStroke);
+
+        // 設置風格
+        circleFeature.setStyle(
+            // 設定風格
+            new ol.style.Style({
+                // 自定義渲染器。配置後fill，stroke和image將被忽略，並且提供的函數將在每個幾何體的每個渲染幀中調用。
+                renderer(coordinates, state) {
+                    // 座標
+                    const [[x, y], [x1, y1]] = coordinates;
+                    const ctx = state.context;
+                    const dx = x1 - x;
+                    const dy = y1 - y;
+                    // Math.sqrt 返回一個數的平方根
+                    // radius 半徑
+                    const radius = Math.sqrt(dx * dx + dy * dy);
+
+                    // 內半徑
+                    const innerRadius = 0;
+                    // 外半徑
+                    const outerRadius = radius * 1.4;
+
+                    // createRadialGradient(x0, y0, r0, x1, y1, r1) 是 Canvas 2D API根据参数确定两个圆的坐标，绘制放射性渐变的方法。这个方法返回 CanvasGradient。
+                    // 參考網址:https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/createRadialGradient
+                    const gradient = ctx.createRadialGradient(
+                        x,
+                        y,
+                        innerRadius,
+                        x,
+                        y,
+                        outerRadius
+                    );
+                    // addColorStop(offset, color) 向給定的畫布漸變添加了一個由 anoffset和 a 定義的新色標color。
+                    gradient.addColorStop(0, 'rgba(255,0,0,0)');
+                    // addColorStop(offset, color) 向給定的畫布漸變添加了一個由 anoffset和 a 定義的新色標color。
+                    gradient.addColorStop(0.6, 'rgba(255,0,0,0.2)');
+                    // addColorStop(offset, color) 向給定的畫布漸變添加了一個由 anoffset和 a 定義的新色標color。
+                    gradient.addColorStop(1, 'rgba(255,0,0,0.8)');
+
+                    // Canvas 2D API 的 方法通過清空子路徑列表來啟動新路徑。
+                    ctx.beginPath();
+                    // arc(x, y, radius, startAngle, endAngle [, counterclockwise]) 為當前子路徑添加一個圓弧。
+                    // 參考網址:https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/arc
+                    ctx.arc(x, y, radius, 0, 2 * Math.PI, true);
+                    // 屬性指定要使用內部形狀的顏色、漸變或圖案。
+                    ctx.fillStyle = gradient;
+                    // 將陣列中索引的第一個到最後一個的每個位置全部填入一個靜態的值。
+                    ctx.fill();
+                    // 是 Canvas 2D API 描述畫筆（繪製圖形）顏色或樣式的屬性。
+                    ctx.strokeStyle = 'rgba(255,0,0,1)';
+                    // Canvas 2D API 的 方法使用當前筆觸樣式繪製（勾勒）當前或給定路徑。
+                    ctx.stroke();
+
+                    // 渲染標籤文本(自訂方法)
+                    // get(key)獲取一個值。
+                    renderLabelText(ctx, x, y, circleFeature.get('label-color'));
+                },
+                // 用於命中檢測的自定義渲染器。如果提供，將用於命中檢測渲染。
+                hitDetectionRenderer(coordinates, state) {
+                    // 座標
+                    const [x, y] = coordinates[0];
+                    const ctx = state.context;
+                    // 渲染標籤文本(自訂方法)
+                    // get(key)獲取一個值。
+                    renderLabelText(ctx, x, y, circleFeature.get('label-color'));
+                },
+            })
+        );
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                    // 能見度。
+                    visible: true,
+                }),
+                // 在客戶端呈現的矢量數據。
+                new ol.layer.Vector({
+                    // 來源:為矢量圖層提供特徵源。
+                    source: new ol.source.Vector({
+                        // 特徵。
+                        features: [circleFeature],
+                    }),
+                }),
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標
+                center: columbusCircleCoords,
+                // 視圖縮放等級
+                zoom: 19,
+            }),
+        });
+
+        // 觸發事件
+        // pointermove 滑鼠停留
+        map.on('pointermove', (evt) => {
+            // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+            const featureOver = map.forEachFeatureAtPixel(evt.pixel, (feature) => {
+                // set(key, value, opt_silent(註:更新而不觸發事件。)) 設置一個值。
+                feature.set('label-color', 'rgba(255,255,255,1)'); // 白色
+                return feature;
+            });
+
+            // pointerOverFeature 指針(滑鼠)覆蓋特徵(註:自訂物件)
+            if (pointerOverFeature && pointerOverFeature != featureOver) {
+                // set(key, value, opt_silent(註:更新而不觸發事件。)) 設置一個值。
+                pointerOverFeature.set('label-color', labelTextStroke);
+            }
+            pointerOverFeature = featureOver;
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/custom-hit-detection-renderer.html">官方範例</a>
+</body>
+
+</html>

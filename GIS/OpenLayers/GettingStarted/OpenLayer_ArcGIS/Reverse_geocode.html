@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>反向地理編碼</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <link rel="stylesheet" href="Css/ol-popup.css" />
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 地理編碼助手 -->
+    <script src="Js/geocoding.umd.min.js"></script>
+    <!-- ArcGIS 身份驗證助手 -->
+    <script src="Js/auth.umd.min.js"></script>
+    <!-- OpenLayers 地圖的基本彈出疊加層 -->
+    <script src="Js/ol-popup.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>反向地理編碼</h1>
+    <h4>了解如何查找附近的地址地點與地理編碼服務.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>反向地理編碼是將一個地點到一個地址或地方. 要反向地理編碼，您可以使用地理編碼服務和reverseGeocode操作。此操作需要一個初始位置，並返回一個帶有地名和位置等屬性的地址。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([2.3522, 48.8566]), // Paris
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Navigation";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 產生一個彈跳視窗
+        const popup = new Popup();
+        // 將給定的疊加層添加到地圖中。
+        map.addOverlay(popup);
+
+        // 無需拖動即可單擊。雙擊將觸發其中兩個。
+        map.on("click", (e) => {
+            // ol/proj.transform(座標, 來源, 目標) 將坐標從源投影轉換為目標投影。
+            const coords = ol.proj.transform(e.coordinate, "EPSG:3857", "EPSG:4326");
+
+            // 用於使用 API密鑰進行身份驗證。
+            const authentication = new arcgisRest.ApiKey({
+                // key: value
+                key: apiKey
+            });
+
+            // 用於確定一個位置的地址。
+            arcgisRest.reverseGeocode(coords, {
+                // API密鑰驗證
+                authentication
+            })
+            // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+            .then((result) => {
+                // 設定彈跳視窗的內容
+                const message =`${result.address.LongLabel}<br>` + `${result.location.x.toLocaleString()}, ${result.location.y.toLocaleString()}`;
+                // popup.show(點位座標, 要顯示的內容) 顯示彈跳視窗
+                popup.show(e.coordinate, message);
+            })
+            // error處理
+            .catch((error) => {
+                // 隱藏視窗
+                popup.hide();
+                console.error(error);
+            });
+        });
+
+        olms.apply(map, "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey);
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/geocode-and-search/reverse-geocode/">官方範例</a>
+</body>
+</html>

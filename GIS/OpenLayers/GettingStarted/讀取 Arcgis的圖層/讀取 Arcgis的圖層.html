@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>讀取 Arcgis的圖層</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="../OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="../OpenLayers_Kit/ol.js"></script>
+    <!-- core-js 使用 api的套件-->
+    <script src="../Js/jQuery_3.6.0.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+    .ol-popup {
+        position: absolute;
+        background-color: white;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #cccccc;
+        bottom: 12px;
+        left: -50px;
+        min-width: 280px;
+    }
+
+    .ol-popup:after,
+    .ol-popup:before {
+        top: 100%;
+        border: solid transparent;
+        content: " ";
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+    }
+
+    .ol-popup:after {
+        border-top-color: white;
+        border-width: 10px;
+        left: 48px;
+        margin-left: -10px;
+    }
+
+    .ol-popup:before {
+        border-top-color: #cccccc;
+        border-width: 11px;
+        left: 48px;
+        margin-left: -11px;
+    }
+
+    /* 彈跳視窗關閉 */
+    .ol-popup-closer {
+        text-decoration: none;
+        position: absolute;
+        top: 2px;
+        right: 8px;
+    }
+
+    .ol-popup-closer:after {
+        content: "✖";
+    }
+</style>
+
+<body>
+    <h1>讀取 Arcgis的圖層</h1>
+    <div id="map" class="map"></div>
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div>
+    <h4>點擊點位彈出視窗</h4>
+    <script>
+        //#region Popup [ 彈出視窗 ]
+        /**
+         * 構成彈出窗口的元素。
+         */
+        // 彈出視窗
+        const container = document.getElementById('popup');
+        // 彈出內容
+        const content = document.getElementById('popup-content');
+        // 彈出關閉器
+        const closer = document.getElementById('popup-closer');
+
+        /**
+         * 創建一個疊加層以將彈出窗口錨定到地圖上。
+         */
+        // 要在地圖上顯示並附加到單個地圖位置的元素。
+        const overlay = new ol.Overlay({
+            // 疊加元素。
+            element: container,
+            // 調用時平移地圖 setPosition，以便覆蓋在當前視口中完全可見？如果true（已棄用），則 autoPanAnimation和autoPanMargin將用於確定平移參數；如果提供了一個對象，則其他參數將被忽略。
+            autoPan: true,
+            // 用於將疊加層平移到視圖中的動畫選項。此動畫僅在 autoPan啟用時使用。可以提供 Aduration和 easing來自定義動畫。如果 autoPan作為對象提供，則棄用並忽略。
+            autoPanAnimation: {
+                duration: 250,
+            },
+        });
+
+        /**
+         * 添加單擊處理程序以隱藏彈出窗口。
+         * @return {boolean} 不要跟著href。
+         */
+        closer.onclick = function () {
+            // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+            overlay.setPosition(undefined);
+            // 從當前元素中移除鍵盤焦點。
+            // 參考網址:https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/blur
+            closer.blur();
+            return false;
+        };
+        //#endregion
+
+        // ArcGIS Url
+        const serviceUrl =
+        'https://www.portlandmaps.com/arcgis/rest/services/Public/Parks_Misc/MapServer/';
+        // 圖層 ID
+        const layer = '21';
+
+        // 以 EsriJSON 格式讀取和寫入數據的特徵格式。
+        const esrijsonFormat = new ol.format.EsriJSON();
+
+        // 為矢量圖層提供特徵源
+        const vectorSource = new ol.source.Vector({
+            // 加載器函數用於加載特性
+            // function(範圍, 解決, 座標系統)
+            loader: function (extent, resolution, projection) {
+                // ArcGIS
+                // encodeURIComponent() 通過將一個，兩個，三個或四個表示字符的 UTF 序列 - 8 編碼的轉義替換為每一個代表的每個實例來編碼（對於由“兩個”組成的情況而言，將只是四個轉義順序）
+                const url =
+                serviceUrl +
+                layer +
+                '/query/?f=json&' +
+                'returnGeometry=true&spatialRel=esriSpatialRelIntersects&geometry=' +
+                encodeURIComponent(
+                    '{"xmin":' +
+                    extent[0] +
+                    ',"ymin":' +
+                    extent[1] +
+                    ',"xmax":' +
+                    extent[2] +
+                    ',"ymax":' +
+                    extent[3] +
+                    ',"spatialReference":{"wkid":102100}}'
+                ) +
+                '&geometryType=esriGeometryEnvelope&inSR=102100&outFields=*' +
+                '&outSR=102100';
+
+                // 連結後端 API
+                $.ajax({
+                    // 請求方式: 讀取
+                    type: "GET",
+                    // 網址
+                    url: url,
+                    // 預期服務器返回的數據類型。
+                    dataType: 'jsonp',
+                    // 要求為Function類型的參數，請求成功後調用的回調函數，有兩個參數。
+                    success: function (response) {
+                        // 判斷發生錯誤
+                        if (response.error) {
+                            // 提示視窗
+                            alert(
+                                response.error.message + '\n' + response.error.details.join('\n')
+                            );
+                        } else {
+                            // dataProjection 將從文檔中讀取
+                            // readFeatures(來源, opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                            const features = esrijsonFormat.readFeatures(response, {
+                                // 格式閱讀器創建的特徵幾何的投影: 投影座標系統
+                                featureProjection: projection,
+                            });
+                            // 判斷 讀取的資料大於 0
+                            if (features.length > 0) {
+                                // 將一批特徵添加到源中。
+                                vectorSource.addFeatures(features);
+                            }
+                        }
+                    },
+                });
+            },
+            // 要使用的加載策略: 創建一個策略函數，用於基於瓦片網格加載要素
+            strategy: ol.loadingstrategy.tile(
+                // 使用標準 XYZ 平鋪方案創建平舖網格。
+                ol.tilegrid.createXYZ({
+                    // 平舖大小（以像素為單位）。
+                    tileSize: 512,
+                })
+            ),
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const vector = new ol.layer.Vector({
+            // 來源: 為矢量圖層提供特徵源
+            source: vectorSource,
+        });
+
+        // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+        const view = new ol.View({
+            // 地圖中心地點:[經度,緯度]
+            // ol.proj.fromLonLat([經度,緯度]) 將坐標從經度/緯度轉換為不同的投影
+            center: ol.proj.fromLonLat([-122.680, 45.528]),
+            // 視圖縮放等級
+            zoom: 13,
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:來自 ArcGIS Rest 服務的切片數據的圖層源。支持地圖和影像服務。
+                    source: new ol.source.OSM({})
+                }),
+                vector,
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 最初添加到地圖的疊加層。默認情況下，不添加疊加層。
+            overlays: [overlay],
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: view,
+        });
+
+        /**
+         * 向地圖添加單擊處理程序以呈現彈出窗口。
+         */
+        // click 無需拖動即可單擊
+        map.on('click', function (evt) {
+            // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+            const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
+                return feature;
+            });
+
+            if (feature) {
+                // 座標
+                const coordinate = evt.coordinate;
+
+                // 獲取或設置元素中包含的HTML或XML標記。
+                content.innerHTML =
+                    `<h3>${feature.get('COMMON')}</h3><hr/>
+                    <p>This tree is located at ${feature.get('SITE_ADDRESS')} and its scientific name is ${feature.get('SCIENTIFIC')}.</p>`;
+                // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+                overlay.setPosition(coordinate);
+            }
+
+            else {
+                // 設置此疊加層的位置。如果位置 undefined是隱藏的覆蓋。
+                overlay.setPosition(undefined);
+            }
+        });
+
+        // pointermove 當指針移動時觸發。請注意，在觸摸設備上，這是在平移地圖時觸發的，因此與 mousemove 不同。
+        map.on('pointermove', function (e) {
+            // 返回瀏覽器事件相對於視口的地圖像素位置。
+            // 使用原本 javascript的 event(處理)事件
+            const pixel = map.getEventPixel(e.originalEvent);
+            // 檢測要素是否與視口上的像素相交。
+            const hit = map.hasFeatureAtPixel(pixel);
+            // getTarget 獲取渲染此地圖的目標。
+            // style.cursor 鼠標光標
+            // pointer 指針(圖標)
+            map.getTarget().style.cursor = hit ? 'pointer' : '';
+        });
+    </script>
+</body>
+
+</html>

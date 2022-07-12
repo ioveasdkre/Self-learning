@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>數據的動態更新</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region 添加數據
+    var base = +new Date(2014, 9, 3);
+    // 24h * 60m * 60s * 1000(毫秒)
+    var oneDay = 24 * 3600 * 1000;
+    // data 初始化
+    var date = [];
+    // Math.random() * 最大值  回傳隨機數
+    var data = [Math.random() * 150];
+    // 存起來
+    var now = new Date(base);
+    // 添加數據(移動)
+    function addData(shift) {
+      // getFullYear 抓取年份
+      // getMonth 抓取月份
+      // getDate 抓取天數
+      // .join(要填的值) 抓取陣列的值 並用 要填的值作為間隔
+      now = [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/');
+      // push(要新增的參數或物件) 新增至陣列尾端
+      date.push(now);
+      // push(要新增的參數或物件) 新增至陣列尾端
+      // data[data.length - 1] 抓取 data最後的隨機數
+      data.push((Math.random() - 0.4) * 10 + data[data.length - 1]);
+      if (shift) {
+        // 移除陣列的第一位，並回傳，此方法會改變陣列的長度。
+        date.shift();
+        data.shift();
+      }
+      // 初始日期加上一天並存起來
+      now = new Date(+new Date(now) + oneDay);
+    }
+    for (var i = 1; i < 100; i++) {
+      addData();
+    }
+
+    option = {
+      // X座標
+      xAxis: {
+        //主座標
+        type: 'category',
+        // 坐标轴两边留白策略，类目轴和非类目轴的设置和表现不一样。
+        // 类目轴中 boundaryGap 可以配置为 true 和 false。默认为 true，这时候刻度只是作为分隔线，标签和数据点都会在两个刻度之间的带(band)中间。
+        // 非类目轴，包括时间，数值，对数轴，boundaryGap是一个两个值的数组，分别表示数据最小值和最大值的延伸范围，可以直接设置数值或者相对的百分比，在设置 min 和 max 后无效。
+        boundaryGap: false,
+        // 數據
+        data: date
+      },
+      yAxis: {
+        // 坐标轴两边留白策略，类目轴和非类目轴的设置和表现不一样。
+        // 类目轴中 boundaryGap 可以配置为 true 和 false。默认为 true，这时候刻度只是作为分隔线，标签和数据点都会在两个刻度之间的带(band)中间。
+        // 非类目轴，包括时间，数值，对数轴，boundaryGap是一个两个值的数组，分别表示数据最小值和最大值的延伸范围，可以直接设置数值或者相对的百分比，在设置 min 和 max 后无效。
+        boundaryGap: [0, '50%'],
+        // 數值軸，適用於連續數據。
+        type: 'value'
+      },
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          name: '成交',
+          // 折線圖
+          type: 'line',
+          // 平滑曲線
+          smooth: true,
+          // 标记的图形(點)
+          // 提供類型：'circle', 'rect', 'roundRect', 'triangle', 'diamond', 'pin', 'arrow', 'none'
+          // none 無點
+          symbol: 'none',
+          // 數據堆疊
+          stack: 'a',
+          // 區域樣式
+          areaStyle: {
+            normal: {}
+          },
+          // 數據
+          data: data
+        }
+      ]
+    };
+    //#endregion
+
+    //#region 設定間隔
+    // setInterval(執行的方法, 時間)
+    // 以毫秒（千分之一秒）為單位
+    // 一旦計時器到期，將傳遞給func指定的函數的附加參數。
+    // https://developer.mozilla.org/zh-TW/docs/Web/API/setInterval
+    setInterval(function () {
+      // 添加數據
+      addData(true);
+      // 設定選項
+      myChart.setOption({
+        // X座標
+        xAxis: {
+          // 數據
+          data: date
+        },
+        // 系列設定（系列的資料）設定資料
+        series: [
+          {
+            name: '成交',
+            // 數據
+            data: data
+          }
+        ]
+      });
+    }, 500);
+    //#endregion
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/data/dynamic-data/">官網範例連結</a>
+</body>
+
+</html>

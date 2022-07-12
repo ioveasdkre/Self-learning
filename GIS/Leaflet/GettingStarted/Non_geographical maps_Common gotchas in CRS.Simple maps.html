@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>非地理地圖(例：遊戲地圖)-CRS.Simple 地圖中的常見問題</title>
+
+    <!-- 網址連結 Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+    crossorigin=""/>
+    
+    <!-- 一定要在Leaflet's CSS之後再加入 -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+    integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+    crossorigin=""></script>
+</head>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    #map {
+        width: 600px;
+        height: 400px;
+    }
+</style>
+<body>
+    <!-- 初始化地圖 -->
+    <div id='map'></div>
+
+    <!-- CRS.Simple 地圖中的常見問題 -->
+    <!-- 在默認的 Leaflet CRS 中CRS.Earth，360 度經度映射到 256 個水平像素（縮放級別 0），大約 170 度緯度映射到 256 個垂直像素（縮放級別 0）。
+
+    在一CRS.Simple，一個水平地圖單元被映射到一個水平像素，以及同上垂直。這意味著整個地圖大約有 1000x1000 像素大，無法放入我們的 HTML 容器中。幸運的是，我們可以設置minZoom為低於零的值： -->
+    <script>
+        // map('id') 地圖
+        var map = L.map('map', {
+            // 處裡圖像
+            crs: L.CRS.Simple,
+            // 最小縮放
+            minZoom: -5
+        });
+
+        // 像素與地圖單位
+        // 使用時的一個常見錯誤CRS.Simple是假設地圖單位等於圖像像素。在本例中，地圖覆蓋 1000x1000 個單位，但圖像大小為 2315x2315 像素。不同的情況會要求一個像素 = 一個地圖單元，或者 64 個像素 = 一個地圖單元，或者任何東西。考慮網格中的地圖單位，然後相應地添加圖層（L.ImageOverlays、L.Markers 等）。
+
+        // 事實上，我們使用的圖像覆蓋了 1000 多個地圖單元 - 有相當大的餘量。測量 0 和 1000 坐標之間有多少像素，並進行外推，我們可以為該圖像獲得正確的坐標範圍：
+        var bounds = [[-26.5,-25], [1021.5,1023]];
+        // imageOverlay('圖片網址', 圖像邊界) 載入本地圖片實現拖拽和縮放
+        var image = L.imageOverlay('img/uqm_map_full.png', bounds).addTo(map);
+
+        // 在此期間，讓我們添加一些標記：
+        // latLng([y, x]) 緯度
+        var sol = L.latLng([ 145, 175 ]);
+        // marker([地理坐標]) 標記符號(地圖上標記符號)
+        L.marker(sol).addTo(map);
+        // setView([地理坐標], 縮放級別)
+        map.setView( [70, 120], 1);
+    </script>
+
+    <!-- LatLng([y, x])改為 x, y 此範例以地圖標示座位置練習-->
+    <script>
+        var yx = L.latLng;
+
+        // Util.isArray() 若是對象為數組則返回true
+        var xy = function(x, y) {
+            if (L.Util.isArray(x)) {    // When doing xy([x, y]);
+                return yx(x[1], x[0]);
+            }
+            return yx(y, x);  // When doing xy(x, y);
+        };
+
+        var sol      = xy(175.2, 145.0);
+        var mizar    = xy( 41.6, 130.1);
+        var kruegerZ = xy( 13.4,  56.5);
+        var deneb    = xy(218.7,   8.3);
+
+        // marker([地理坐標]) 標記符號(地圖上標記符號)
+        // bindPopup 點擊彈出視窗
+        L.marker(     sol).addTo(map).bindPopup(      'Sol');
+        L.marker(   mizar).addTo(map).bindPopup(    'Mizar');
+        L.marker(kruegerZ).addTo(map).bindPopup('Krueger-Z');
+        L.marker(   deneb).addTo(map).bindPopup(    'Deneb');
+
+        // polyline([[[x, y],[x, y]],[[x, y],[x, y]]]) 建立條線(可建立多條)
+        var travel = L.polyline([sol, deneb]).addTo(map);
+    </script>
+    <a href="https://leafletjs.com/examples/crs-simple/crs-simple.html">官網範例連結</a>
+</body>
+</html>

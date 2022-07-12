@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖例</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // 說明 顯示 legend或 dimensions或 source第一行設定的內容
+            legend: {
+                // Try 'horizontal'
+                // 東方:垂直 (右邊年份)
+                orient: 'vertical',
+                // 右邊
+                right: 10,
+                // 上方:置中
+                top: 'center'
+            },
+            // 數據
+            dataset: {
+                // 这个 dataset 的 index 是 `0`。
+                source: [
+                    ['product', '2015', '2016', '2017'],
+                    ['Matcha Latte', 43.3, 85.8, 93.7],
+                    ['Milk Tea', 83.1, 73.4, 55.1],
+                    ['Cheese Cocoa', 86.4, 65.2, 82.5],
+                    ['Walnut Brownie', 72.4, 53.9, 39.1]
+                ]
+            },
+            // X座標
+            xAxis: {
+                // 主座標
+                type: 'category'
+            },
+            // Y座標
+            yAxis: {},
+            // 系列設定（系列的資料）設定資料
+            // bar 柱狀圖
+            series: [{ type: 'bar' }, { type: 'bar' }, { type: 'bar' }]
+        };
+        //#endregion
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/concepts/legend">官網範例連結</a>
+</body>
+
+</html>

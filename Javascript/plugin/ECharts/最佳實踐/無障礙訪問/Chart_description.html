@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>圖表描述</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region 指定图表的配置项和数据
+    option = {
+      // W3C 制定了無障礙富互聯網應用規範集（WAI-ARIA，the Accessible Rich Internet Applications Suite），致力於使得網頁內容和網頁應用能夠被更多殘障人士訪問。 Apache ECharts 4 遵從這一規範，支持自動根據圖表配置項智能生成描述，使得盲人可以在朗讀設備的幫助下了解圖表內容，讓圖表可以被更多人群訪問。除此之外，Apache ECharts 5 新增支持貼花紋理，作為顏色的輔助表達，進一步用以區分數據。
+      aria: {
+        // 展示
+        show: true
+      },
+      // 標頭
+      title: {
+        text: '某站点用户访问来源',
+        // X軸:置中
+        x: 'center'
+      },
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          name: '访问来源',
+          // 圓餅圖
+          type: 'pie',
+          // 數據
+          data: [
+            { value: 335, name: '直接访问' },
+            { value: 310, name: '邮件营销' },
+            { value: 234, name: '联盟广告' },
+            { value: 135, name: '视频广告' },
+            { value: 1548, name: '搜索引擎' }
+          ]
+        }
+      ]
+    };
+    //#endregion
+
+    option && myChart.setOption(option);
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/best-practices/aria">官網範例連結</a>
+</body>
+
+</html>

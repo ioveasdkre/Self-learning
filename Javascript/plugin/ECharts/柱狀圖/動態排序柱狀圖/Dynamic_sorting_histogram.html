@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動態排序柱狀圖</title>
+
+    <meta charset="utf-8" />
+    <!-- 引入刚刚下载的 ECharts 文件 -->
+    <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+    <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+    <div id="main" style="width: 600px;height:400px;"></div>
+    <script type="text/javascript">
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        // 設計一個 data陣列
+        var data = [];
+        for (let i = 0; i < 5; ++i) {
+            // push(要新增的參數或物件) 新增至陣列尾端
+            // Math.round(數字類型) 四捨五入
+            // Math.random() * 最大值  回傳隨機數
+            data.push(Math.round(Math.random() * 200));
+        }
+
+        //#region 指定图表的配置项和数据
+        option = {
+            // X座標
+            xAxis: {
+                // 最大值:表示用數據的最大值作為 X 軸最大值，視覺效果更好
+                max: 'dataMax'
+            },
+            // Y座標
+            yAxis: {
+                // 主座標
+                type: 'category',
+                // 數據
+                data: ['A', 'B', 'C', 'D', 'E'],
+                // 表示 Y 轴从下往上是从小到大的排列
+                inverse: true,
+                // animationDuration: 時間長度  第一次柱条排序动画的时长
+                animationDuration: 300,
+                // animationDurationUpdate:時間長度  第一次后柱条排序动画的时长
+                animationDurationUpdate: 300,
+                // max:要顯示的數量  0為1 1為2  以此類推
+                max: 2 // only the largest 3 bars will be displayed
+            },
+            // 系列設定（系列的資料）設定資料
+            series: [
+                {
+                    // 開啟 Y 軸的動態排序效果
+                    realtimeSort: true,
+                    name: 'X',
+                    // 柱狀圖
+                    type: 'bar',
+                    // 數據
+                    data: data,
+                    // 標籤
+                    label: {
+                        // 顯示
+                        show: true,
+                        // 位置:右邊
+                        position: 'right',
+                        // 實時改變標籤
+                        valueAnimation: true
+                    }
+                }
+            ],
+            // 說明 顯示 legend或 dimensions或 source第一行設定的內容
+            legend: {
+                // 顯示
+                show: true
+            },
+            // 設為0，表示第一份數據不需要從 0 開始動畫（如果希望從 0 開始則設為和 animationDurationUpdate 相同的值）
+            animationDuration: 3000,
+            // 每次更新動畫時長，這一數值應與調用 setOption 改變數據的頻率相同
+            animationDurationUpdate: 3000,
+            // 初始动画的缓动效果。不同的缓动效果可以参考。
+            // https://echarts.apache.org/examples/zh/editor.html?c=line-easing
+            animationEasing: 'linear',
+            // 数据更新动画的缓动效果。
+            animationEasingUpdate: 'linear'
+        };
+        //#endregion
+
+        //#region update
+        function update() {
+            // 抓取 data數據存起來
+            var data = option.series[0].data;
+            // 撈 data數據
+            for (var i = 0; i < data.length; ++i) {
+                // Math.random() 預設為0~1之間的隨機數
+                if (Math.random() > 0.9) {
+                    // Math.round(數字類型) 四捨五入
+                    // Math.random() * 最大值  回傳隨機數
+                    // 原本的 data陣列的數字再加上隨機產生的值
+                    data[i] += Math.round(Math.random() * 2000);
+                }
+                else {
+                    // Math.round(數字類型) 四捨五入
+                    // Math.random() * 最大值  回傳隨機數
+                    // 原本的 data陣列的數字再加上隨機產生的值
+                    data[i] += Math.round(Math.random() * 200);
+                }
+            }
+            // 使用剛指定的配置項和數據顯示圖表。
+            myChart.setOption(option);
+        }
+        //#endregion
+
+        // setInterval(執行的方法, 時間)
+        // 以毫秒（千分之一秒）為單位
+        // 一旦計時器到期，將傳遞給func指定的函數的附加參數。
+        // https://developer.mozilla.org/zh-TW/docs/Web/API/setInterval
+        setInterval(function loop() {
+            update();
+        }, 3000);
+
+
+        // 使用剛指定的配置項和數據顯示圖表。
+        myChart.setOption(option);
+    </script>
+    <a href="https://echarts.apache.org/handbook/zh/how-to/chart-types/bar/bar-race">官網範例連結</a>
+</body>
+
+</html>

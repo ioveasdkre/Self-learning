@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>實現基本的拖拽功能</title>
+
+  <meta charset="utf-8" />
+  <!-- 引入刚刚下载的 ECharts 文件 -->
+  <script src="../../js/jQuery3.6.0.js"></script>
+  <script src="../../js/echarts.js"></script>
+</head>
+
+<body>
+  <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
+  <div id="main" style="width: 600px;height:400px;"></div>
+  <script>
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('main'));
+
+    //#region 指定图表的配置项和数据
+    // 符號大小
+    var symbolSize = 20;
+    // 这个 data 变量在这里单独声明，在后面也会用到。
+    var data = [
+      [15, 0],
+      [-50, 10],
+      [-56.5, 20],
+      [-46.5, 30],
+      [-22.1, 40]
+    ];
+    // 設置選項
+    myChart.setOption({
+      // 默認不顯示，可以在 legend 文字很多的時候對文字做裁剪並且開啟 tooltip
+      tooltip: {
+        // 觸發
+        /*
+          提示框触发的条件，可选：
+          'mousemove' 鼠标移动时触发。
+          'click' 鼠标点击时触发。
+          'mousemove|click' 同时鼠标移动和点击时触发。
+          'none' 不在 'mousemove' 或 'click' 时触发，用户可以通过 action.tooltip.showTip 和 action.tooltip.hideTip 来手动触发和隐藏。也可以通过 axisPointer.handle 来触发或隐藏。
+        */
+        triggerOn: 'none',
+        // 提示框浮层内容格式器，支持字符串模板和回调函数两种形式。
+        // 格式請參筆記本
+        formatter: function (params) {
+          // toFixed方法會使用定點小數表示法（fixed-point notation）來格式化數字。
+          // 例：var Number = 10.1; Number.toFixed(2) 顯示為 10.10
+          return (
+            'X: ' +
+            params.data[0].toFixed(2) +
+            '<br />Y: ' +
+            params.data[1].toFixed(2)
+          );
+        }
+      },
+      // X座標
+      xAxis: {
+        // 最小值
+        min: -100,
+        // 最大值
+        max: 80,
+        // 數值軸，適用於連續數據。
+        type: 'value',
+        // 軸線
+        axisLine: {
+          // X 轴或者 Y 轴的轴线是否在另一个轴的 0 刻度上，只有在另一个轴为数值轴且包含 0 刻度时有效。
+          onZero: false
+        }
+      },
+      // Y座標
+      yAxis: {
+        // 最小值
+        min: -30,
+        // 最大值
+        max: 60,
+        // 數值軸，適用於連續數據。
+        type: 'value',
+        // 軸線
+        axisLine: {
+          // X 轴或者 Y 轴的轴线是否在另一个轴的 0 刻度上，只有在另一个轴为数值轴且包含 0 刻度时有效。
+          onZero: false
+        }
+      },
+      // 系列設定（系列的資料）設定資料
+      series: [
+        {
+          id: 'a',
+          // 折線圖
+          type: 'line',
+          // 平滑曲線
+          smooth: true,
+          // 符號大小
+          symbolSize: symbolSize, // 为了方便拖拽，把 symbolSize 尺寸设大了。
+          // 數據
+          data: data
+        }
+      ]
+    });
+    //#endregion
+
+    //#region 拖拽功能
+    myChart.setOption({
+      // graphic 原生圖形元素組件。可以支持的圖形元素包括：
+      // image, text, circle, sector, ring, polygon, polyline, rect, line, bezierCurve, arc, group
+
+      // 声明一个 graphic component，里面有若干个 type 为 'circle' 的 graphic elements。
+      // 这里使用了 echarts.util.map 这个帮助方法，其行为和 Array.prototype.map 一样，但是兼容 es5 以下的环境。
+      // 用 map 方法遍历 data 的每项，为每项生成一个圆点。
+      graphic: echarts.util.map(data, function (item, dataIndex) {
+        return {
+          // 'circle' 表示這個圖形元素的類型是圓點。
+          type: 'circle',
+          // position 位置
+          // convertToPixel(座標,要轉換的值) 轉換坐標系上的點到像素坐標值。
+          // 用 transform 的方式对圆点进行定位。position: [x, y] 表示将圆点平移到 [x, y] 位置。
+          // 这里使用了 convertToPixel 这个 API 来得到每个圆点的位置，下面介绍。
+          position: myChart.convertToPixel('grid', item),
+          // 圓點的半徑。
+          shape: { r: symbolSize / 2 },
+          // 這個屬性讓圓點不可見（但不影響他響應的鼠標事件）。
+          invisible: true,
+          // 這個屬性讓圓點可以被拖拽。
+          draggable: true,
+          // 這個圓點的拖拽的響應事件，在拖拽過程中會不斷被觸發。下面介紹詳情。
+          // 這裡使用了echarts.util.curry這個幫助方法，英文是生成一個與onPointDragging功能的新的函數(自己設計的方法)，只是第一個參數永遠為此時的數據索引的值。
+          ondrag: echarts.util.curry(onPointDragging, dataIndex),
+          // 滑鼠停留
+          onmousemove: echarts.util.curry(showTooltip, dataIndex),
+          // 滑鼠移出
+          onmouseout: echarts.util.curry(hideTooltip, dataIndex),
+          // 把z值設得比較大，表示圓點在這個地方，能覆蓋住頂的折線圖的圓點。
+          z: 100
+        };
+      })
+    });
+    //#endregion
+
+    //#region 每次拖拽圓點計算位置，並用 setOption 更新。
+    // 添加事件監聽器
+    // 接口 的addEventListener()方法EventTarget設置了一個函數，每當指定的事件傳遞給目標時，該函數就會被調用。
+    window.addEventListener('resize', function () {
+      // 設置選項
+      myChart.setOption({
+        // graphic 原生圖形元素組件。可以支持的圖形元素包括：
+        // image, text, circle, sector, ring, polygon, polyline, rect, line, bezierCurve, arc, group
+
+        // 声明一个 graphic component，里面有若干个 type 为 'circle' 的 graphic elements。
+        // 这里使用了 echarts.util.map 这个帮助方法，其行为和 Array.prototype.map 一样，但是兼容 es5 以下的环境。
+        // 用 map 方法遍历 data 的每项，为每项生成一个圆点。
+        graphic: echarts.util.map(data, function (item, dataIndex) {
+          // position 位置
+          // convertToPixel(座標,要轉換的值) 轉換坐標系上的點到像素坐標值。
+          // 用 transform 的方式对圆点进行定位。position: [x, y] 表示将圆点平移到 [x, y] 位置。
+          // 这里使用了 convertToPixel 这个 API 来得到每个圆点的位置，下面介绍。
+          return { position: myChart.convertToPixel('grid', item) };
+        })
+      });
+    });
+    //#endregion
+
+    //#region 顯示工具提示
+    /**
+     * 顯示工具提示
+     * @param {Number} dataIndex 第幾位
+     */
+    function showTooltip(dataIndex) {
+      // 觸發圖形行為，例如圖例開關legendToggleSelect，數據區域縮放數據Zoom，顯示提示框showTip等等，更多見動作和事件的文檔。
+      myChart.dispatchAction({
+        // 顯示提示框
+        type: 'showTip',
+        // 「id」这个配置无默认值，但实测最新的 ECharts 4.2.1 是有默认值的，规则如下（「seriesId」即「id」，「seriesIndex」即 series[i] 的 i，「seriesName」是后面的「series[i]-line.name」）
+        seriesIndex: 0,
+        // 使用別的數據
+        dataIndex: dataIndex
+      });
+    }
+    //#endregion
+
+    //#region 隱藏工具提示
+    /**
+     * 隱藏工具提示
+     * @param {Number} dataIndex 第幾位
+     */
+    function hideTooltip(dataIndex) {
+      // 觸發圖形行為，例如圖例開關legendToggleSelect，數據區域縮放數據Zoom，顯示提示框showTip等等，更多見動作和事件的文檔。
+      myChart.dispatchAction({
+        // 隱藏提示框
+        type: 'hideTip'
+      });
+    }
+    //#endregion
+
+    //#region 點拖曳
+    /**
+     * 點拖曳
+     * @param {Number} dataIndex 第幾位
+     * @param {Number} dx 拖曳後的 X軸
+     * @param {Number} dy 拖曳後的 Y軸
+     */
+    //拖拽某個圓點的過程中會不斷調用此函數。
+    //此函數中會根據拖拽後的新位置，改變數據中的值，並用新的數據，重繪折線圖，從而使折線圖同步值被拖拽的隱藏點。
+    function onPointDragging(dataIndex, dx, dy) {
+      // 這裡的 data 就是本文最初的代碼塊中聲明的 data，在這裡會被更新。
+      // 這裡的 this 就是被拖拽的圓點。 this.position 就是圓點當前的位置。
+      data[dataIndex] = myChart.convertFromPixel('grid', this.position);
+      // 用更新後的 data，重繪折線圖。
+      myChart.setOption({
+        // 系列設定（系列的資料）設定資料
+        series: [
+          {
+            id: 'a',
+            // 數據
+            data: data
+          }
+        ]
+      });
+    }
+    //#endregion
+  </script>
+  <a href="https://echarts.apache.org/handbook/zh/how-to/interaction/drag">官網範例連結</a>
+</body>
+
+</html>

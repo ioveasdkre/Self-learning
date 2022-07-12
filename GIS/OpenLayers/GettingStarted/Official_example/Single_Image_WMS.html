@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>單圖像 WMS</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>單圖像 WMS</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>WMS 可以用作圖像層，如此處所示，或用作平鋪層，如平鋪 WMS 示例示例中所示。切片可以被緩存，因此瀏覽器不會重新獲取已經查看過的區域的數據。但是對於不知道切片的 WMS 服務器可能存在重複標籤的問題，在這種情況下，單個圖像 WMS 將生成更好的製圖。</h4>
+    <script>
+        // 這裡是宣告圖層陣列
+        const layers = [
+            // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+            new ol.layer.Tile({
+                // 來源: OpenStreetMap 切片服務器的圖層源。
+                source: new ol.source.OSM(),
+            }),
+            // 可用於任意範圍和分辨率的服務器渲染圖像。
+            new ol.layer.Image({
+                // 圖層渲染的邊界範圍。
+                extent: [-13884991, 2870341, -7455066, 6338219],
+                // 來源: WMS 服務器的來源，提供單一的、untiled 的圖像。
+                source: new ol.source.ImageWMS({
+                    // WMS 服務 URL。
+                    url: 'https://ahocevar.com/geoserver/wms',
+                    // WMS 請求參數。至少LAYERS需要一個參數。STYLES是 ''默認的。VERSION是1.3.0默認的。
+                    params: { 'LAYERS': 'topp:states' },
+                    // 比率。1表示圖像請求是地圖視口的大小，表示地圖視口2的寬度和高度的兩倍，依此類推。必須是1或更高。
+                    ratio: 1,
+                    // 遠程 WMS 服務器的類型：mapserver,geoserver或qgis。僅當hidpiis時才需要true。
+                    serverType: 'geoserver',
+                }),
+            }),
+        ];
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: layers,
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點:[經度,緯度]
+                center: [-10997148, 4569099],
+                // 視圖縮放等級
+                zoom: 4,
+            }),
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wms-image.html">官方範例</a>
+</body>
+
+</html>

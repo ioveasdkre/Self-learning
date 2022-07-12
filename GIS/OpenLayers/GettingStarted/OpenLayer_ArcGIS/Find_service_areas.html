@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查找服務區域</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- ArcGIS 服務 -->
+    <script src="Js/olms.js"></script>
+    <!-- ArcGIS 常用方法和實用程序 -->
+    <script src="Js/request.umd.min.js"></script>
+    <!-- ArcGIS 路由助手 -->
+    <script src="Js/routing.umd.min.js"></script>
+    <!-- ArcGIS 身份驗證助手 -->
+    <script src="Js/auth.umd.min.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #map {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #323232;
+    }
+</style>
+<body>
+    <h1>查找服務區域</h1>
+    <h4>了解如何計算區域可以在給定的行駛時間內從某個位置到達.</h4>
+    <div id="map" class="map"></div>
+    <h4>將 apiKey替換為儀表板中的 API密鑰。</h4>
+    <h4>一個服務區，也稱為等時線，是一個多邊形，表示在街道網絡上行駛或行走時可以到達的區域。可以到達的區域受到時間或距離的限制。</h4>
+    <h4>計算服務區, 你可以使用路由服務. 你提供一個開始地點（設施）、一個或多個時間或距離值以及空間參考。處理完成後，服務將返回可到達的服務區域。</h4>
+    <script>
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: "map",
+            // 這裡是地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 地圖中心地點: 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([100.5231, 13.7367]), // 曼谷
+                // 視圖縮放等級
+                zoom: 12
+            })
+        });
+
+        // ArcGIS apikey
+        const apiKey = "請輸入 apikey";
+        // 圖層 ID
+        const basemapId = "ArcGIS:Navigation";
+        // ArcGIS Url
+        const basemapURL = "https://basemaps-api.arcgis.com/arcgis/rest/services/styles/" + basemapId + "?type=style&token=" + apiKey;
+
+        // 起始層
+        let startingPointLayer;
+        //#region addStartingPointLayer [ 添加起點圖層 ]
+        /**
+         * 添加起點圖層
+         * @returns {void}
+         */
+        function addStartingPointLayer() {
+            // 在客戶端呈現的矢量數據。
+            startingPointLayer = new ol.layer.Vector({
+                // 設定風格: 矢量特徵渲染樣式的容器。
+                style: new ol.style.Style({
+                    // 圖像風格。: 圓形
+                    image: new ol.style.Circle({
+                        // 圓半徑
+                        radius: 6,
+                        // 填充樣式。: 設置矢量特徵的填充樣式。
+                        fill: new ol.style.Fill({
+                            // 顏色: 白色
+                            color: "white"
+                        }),
+                        // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                        stroke: new ol.style.Stroke({
+                            // 顏色: 黑色
+                            color: "black",
+                            // 寬度
+                            width: 2
+                        })
+                    })
+                })
+            });
+
+            // 加入圖層
+            map.addLayer(startingPointLayer);
+            // 將圖層存起來
+            window.s = startingPointLayer; // 測試註解掉無任何影響
+        }
+        //#endregion
+
+        // 服務區域層
+        let serviceAreaLayer;
+        //#region addServiceAreaLayer [ 添加服務區圖層 ]
+        /**
+         * 添加服務區圖層
+         * @returns {void}
+         */
+        function addServiceAreaLayer() {
+            const style = (feature) => {
+                // 填充顏色表
+                // hsla(色相(註: 顏色), 飽和, 亮度, 透明度) 
+                const fillColors = {
+                    0: "hsla(210, 80%, 40%, 50%)",
+                    5: "hsla(210, 80%, 60%, 50%)",
+                    10: "hsla(210, 80%, 80%, 50%)"
+                };
+                // 回傳風格
+                return new ol.style.Style({
+                    // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                    fill: new ol.style.Fill({
+                        // 顏色: 顏色表
+                        color: fillColors[feature.get("FromBreak")]
+                    }),
+                    // 筆劃(邊框)風格。: 設置矢量特徵的筆觸樣式。
+                    stroke: new ol.style.Stroke({
+                        // 顏色: 黑色
+                        color: "black"
+                    })
+                });
+            };
+
+            // 在客戶端呈現的矢量數據。
+            serviceAreaLayer = new ol.layer.Vector({
+                // 設置風格
+                style: style
+            });
+
+            // 加入圖層
+            map.addLayer(serviceAreaLayer);
+        }
+        //#endregion
+
+        // 加入圖層
+        // then 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+        olms(map, basemapURL).then(function (map) {
+            // 添加服務區圖層
+            addServiceAreaLayer();
+            // 添加起點圖層
+            addStartingPointLayer();
+        });
+
+        // 無需拖動即可單擊。雙擊將觸發其中兩個。
+        map.on("click", (e) => {
+            // ol.proj.transform(座標, 來源, 目標) 將坐標從源投影轉換為目標投影。
+            const coordinates = ol.proj.transform(e.coordinate, "EPSG:3857", "EPSG:4326");
+
+            // 設置圖層來源。
+            startingPointLayer.setSource(
+                // 為矢量圖層提供特徵源。
+                new ol.source.Vector({
+                    // 特徵
+                    // ol.Feature 具有幾何和其他屬性屬性的地理特徵的矢量對象，類似於 GeoJSON 等矢量文件格式中的特徵。
+                    // ol.geom.Point(坐標, opt_layout) 點幾何。
+                    features: [new ol.Feature(new ol.geom.Point(e.coordinate))]
+                })
+            );
+
+            // 用於使用 API密鑰進行身份驗證。
+            const authentication = new arcgisRest.ApiKey({
+                // key: value
+                key: apiKey
+            });
+
+            // 用於查找在給定行程時間或行程距離內從輸入位置可以到達的區域。
+            arcgisRest.serviceArea({
+                // 設施: 指定生成服務區的一個或多個位置。
+                facilities: [coordinates],
+                // API密鑰驗證
+                authentication
+            })
+            // 接收兩個引數： Promise 在成功及失敗情況時的回呼函式。
+            .then((response) => {
+                // 以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                const geojson = new ol.format.GeoJSON({
+                    // 默認數據投影。
+                    dataProjection: "EPSG:4326",
+                    // 按格式讀取或寫入的特徵的投影。
+                    featureProjection: "EPSG:3857"
+                });
+
+                // readFeatures(來源，opt_options) 閱讀所有功能。適用於單個特徵和特徵集合。
+                const features = geojson.readFeatures(response.saPolygons.geoJson); // 多邊形
+                // 為矢量圖層提供特徵源。
+                const source = new ol.source.Vector({
+                    // 特徵
+                    features: features
+                });
+
+                // 設置圖層來源。
+                serviceAreaLayer.setSource(source);
+            })
+            // error處理
+            .catch((error) => {
+                // 提示視窗
+                alert("使用地理編碼器時出現問題。 有關詳細信息，請參閱控制台。");
+                console.error(error);
+            });
+        });
+    </script>
+    <br><a href="https://developers.arcgis.com/openlayers/route-and-directions/find-service-areas/">官方範例</a>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用googleMap底圖</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="../OpenLayers_Kit/ol.css" type="text/css">
+    <!-- bootstrap.min.css -->
+    <link rel="stylesheet" href="../Js/bootstrap-5.1.3-dist/css/bootstrap.min.css">
+
+    <!-- OpenLayers Library -->
+    <script src="../OpenLayers_Kit/ol.js"></script>
+    <!-- jQuery_3.6.0.js -->
+    <script src="../Js/jQuery_3.6.0.js"></script>
+    <!-- bootstrap.bundle.min.js -->
+    <script src="../Js/bootstrap-5.1.3-dist/Js/bootstrap.bundle.min.js"></script>
+
+    <!-- 此連結為 google底圖，需申請 google api獲取金鑰才可使用，以下為官方範例，故無法導入 -->
+    <!-- <script
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+    </script> -->
+</head>
+<style>
+    .map {
+        height: 400px;
+        width: 600px;
+    }
+</style>
+
+<body>
+    <h1>使用googleMap底圖</h1>
+    <!-- 地圖容器 -->
+    <div id="map" class="map">
+        <div id="popup"></div>
+    </div>
+    <h4>說明：點、圓形、多邊形、折線展示</h4>
+    <h4>對地圖按滑鼠左鍵 + Alt可取得座標</h4>
+    <script>
+        //#region Icon [ 圖標設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const iconFeature = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Point([120.652411, 24.1558311]),
+            name: '<b>Hello world!</b><br />I am a popup.'
+        });
+
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const iconFeature2 = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Point([120.752411, 24.2558311]),
+            name: '<b>happy world!</b><br />Today is Thursday.'
+        });
+
+        // 設定風格
+        const iconStyle = new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 錨。默認值為圖標中心。
+                anchor: [0.5, 46],
+                // 指定錨點 x 值的單位。值'fraction'表示 x 值是圖標的一小部分。
+                anchorXUnits: 'fraction',
+                // 指定錨點 y 值的單位。值'pixels'表示以像素為單位的 y 值。
+                anchorYUnits: 'pixels',
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/icon.png',
+            }),
+        });
+
+        // 設定風格
+        const iconStyle2 = new ol.style.Style({
+            // 圖像風格。
+            image: new ol.style.Icon({
+                // 錨。默認值為圖標中心。
+                anchor: [0.5, 46],
+                // 指定錨點 x 值的單位。值'fraction'表示 x 值是圖標的一小部分。
+                anchorXUnits: 'fraction',
+                // 指定錨點 y 值的單位。值'pixels'表示以像素為單位的 y 值。
+                anchorYUnits: 'pixels',
+                // 圖像源 URI。
+                src: 'https://openlayers.org/en/v4.6.5/examples/data/icon.png',
+            }),
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        iconFeature.setStyle(iconStyle);
+        iconFeature2.setStyle(iconStyle2);
+
+        // 為矢量圖層提供特徵源。
+        const iconvectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [iconFeature, iconFeature2],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const iconLayer = new ol.layer.Vector({
+            // 來源。
+            source: iconvectorSource,
+        });
+        //#endregion
+
+        //#region Circle [ 圓形設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const circleFeature = new ol.Feature({
+            // 特徵的默認幾何:圓形幾何。
+            // ol.geom.Circle(中心(座標), 半徑,佈局(註:選填))
+            geometry: new ol.geom.Circle([120.652511, 24.1558511], 0.005),
+            name: 'I am a circle.'
+        });
+
+        // 設定風格
+        const circlestyle = new ol.style.Style({
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: 'red', // 紅色
+                // 邊線寬度
+                width: 3,
+            }),
+            // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(255, 0, 51, 0.5)', // 紅色
+            }),
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        circleFeature.setStyle(circlestyle);
+
+        // 為矢量圖層提供特徵源。
+        const circlevectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [circleFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const circleLayer = new ol.layer.Vector({
+            // 來源。
+            source: circlevectorSource,
+        });
+        //#endregion
+
+        //#region Polygon [ 多邊形設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const polygonFeature = new ol.Feature({
+            // 特徵的默認幾何:點幾何。
+            geometry: new ol.geom.Polygon([
+                [
+                    [120.63641, 24.16046],
+                    [120.62997, 24.1484],
+                    [120.63864, 24.14511],
+                    [120.63641, 24.16046],
+                ],
+            ]),
+            name: 'I am a Polygon.'
+        });
+
+        // 設定風格
+        const polygonStyle = new ol.style.Style({
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: 'blue', // 藍色
+                // 邊線寬度
+                width: 3,
+            }),
+            // 填充樣式:設置矢量(geojson)特徵的填充樣式。
+            fill: new ol.style.Fill({
+                // 填滿
+                color: 'rgba(0, 0, 255, 0.1)', // 藍色
+            }),
+        })
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        polygonFeature.setStyle(polygonStyle);
+
+        // 為矢量圖層提供特徵源。
+        const polygonvectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [polygonFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const polygonLayer = new ol.layer.Vector({
+            // 來源。
+            source: polygonvectorSource,
+        });
+        //#endregion
+
+        //#region LineString [ 折線設定 ]
+        // 具有幾何和其他屬性屬性的地理要素的矢量對象，類似於 GeoJSON 等矢量文件格式中的要素。
+        const lineFeature = new ol.Feature({
+            // 特徵的默認幾何:線串幾何。
+            geometry: new ol.geom.LineString([
+                [120.63194, 24.1661],
+                [120.66104, 24.16555],
+                [120.66679, 24.16077]
+            ]),
+            name: 'I am a LineString.'
+        });
+
+        // 設定風格
+        const lineStyle = new ol.style.Style({
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: 'red', // 紅色
+                // 邊線寬度
+                width: 3,
+            })
+        });
+
+        // 設置要素的樣式以覆蓋圖層樣式。
+        lineFeature.setStyle(lineStyle);
+
+        // 為矢量圖層提供特徵源。
+        const linevectorSource = new ol.source.Vector({
+            // 特徵。
+            features: [lineFeature],
+        });
+
+        // 在客戶端呈現的矢量數據。
+        const lineLayer = new ol.layer.Vector({
+            // 來源。
+            source: linevectorSource,
+        });
+        //#endregion
+
+        // 使用 google連結
+        // var test = new google.maps.Map(document.getElementById("map"), {
+        //     center: { lat: -34.397, lng: 150.644 },
+        //     zoom: 8,
+        // });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: document.getElementById('map'),
+            // 用於定義地圖中可用的圖層列表。現在第一個也是唯一的層是平鋪層：
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:來自 ArcGIS Rest 服務的切片數據的圖層源。支持地圖和影像服務。
+                    source: new ol.source.XYZ({
+                        maxZoom: 18,
+                        url: 'https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}',
+                        crossOrigin: ''
+                    })
+                }),
+                circleLayer,
+                polygonLayer,
+                lineLayer,
+                iconLayer
+            ],
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標系統:WGS84經緯度（全球性資料，如：GPS） ＝> EPSG:4326
+                projection: "EPSG:4326",
+                // 地圖中心地點
+                center: [120.652411, 24.1558311],
+                // 視圖縮放等級
+                zoom: 14
+            })
+        });
+
+        const element = document.getElementById('popup');
+
+        // 要在地圖上顯示並附加到單個地圖位置的元素。
+        const popup = new ol.Overlay({
+            // 疊加元素。
+            element: element,
+            // 定義疊加層相對於其position屬性的實際定位方式。
+            positioning: 'bottom-center',
+            // 是否應停止事件傳播到地圖視口。
+            stopEvent: false,
+        });
+
+        // 將給定的疊加層添加到地圖。
+        map.addOverlay(popup);
+
+        // click 無需拖動即可單擊
+        map.on('click', function (evt) {
+            // forEachFeatureAtPixel(像素, 回調) 檢測與視口上的像素相交的特徵，並對每個相交的特徵執行回調。
+            const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
+                return feature;
+            });
+
+            if (feature) {
+                // 隱藏和銷毀元素的彈出框。
+                $(element).popover('dispose');
+
+                // 設置此疊加層的定位(定位)。
+                popup.setPosition(evt.coordinate);
+                // 彈出視窗
+                $(element).popover({
+                    // 視窗位置
+                    placement: 'top',
+                    // 將 HTML 插入彈出窗口。
+                    html: true,
+                    // 如果data-content屬性不存在，則默認內容值。如果給出了一個函數，它將被調用，其this引用設置為彈出窗口附加到的元素。
+                    // get(key)獲取一個值。
+                    content: feature.get('name')
+                });
+                // 顯示元素的彈出框。
+                $(element).popover('show');
+            }
+            else {
+                // 隱藏和銷毀元素的彈出框。
+                $(element).popover('dispose');
+            }
+        });
+
+        // pointermove 當指針移動時觸發。請注意，在觸摸設備上，這是在平移地圖時觸發的，因此與 mousemove 不同。
+        map.on('pointermove', function (e) {
+            // 返回瀏覽器事件相對於視口的地圖像素位置。
+            // 使用原本 javascript的 event(處理)事件
+            const pixel = map.getEventPixel(e.originalEvent);
+            // 檢測要素是否與視口上的像素相交。
+            const hit = map.hasFeatureAtPixel(pixel);
+            // getTarget 獲取渲染此地圖的目標。
+            // style.cursor 鼠標光標
+            // pointer 指針(圖標)
+            map.getTarget().style.cursor = hit ? 'pointer' : '';
+        });
+
+        // movestart 當地圖開始移動時觸發。
+        map.on('movestart', function () {
+            // 隱藏和銷毀元素的彈出框。
+            $(element).popover('dispose');
+        });
+
+        // 取得座標
+        // click 無需拖動即可單擊
+        map.on('click', (evt) => {
+            if (event.altKey) {
+                // 座標
+                var coord = evt.coordinate;
+                // 顯式指定小數位幾位
+                var stringifyFunc = ol.coordinate.createStringXY(2);
+                // 轉換座標格式為顯示指定的小數點
+                var out = stringifyFunc(coord);
+
+                // 設置此疊加層的定位(定位)。
+                popup.setPosition(evt.coordinate);
+                // 彈出視窗
+                $(element).popover({
+                    // 視窗位置
+                    placement: 'top',
+                    // 將 HTML 插入彈出窗口。
+                    html: true,
+                    content: '<h6>座標: ' + out + '<h6>'
+                });
+                // 顯示元素的彈出框。
+                $(element).popover('show');
+            }
+        });
+    </script>
+</body>
+
+</html>

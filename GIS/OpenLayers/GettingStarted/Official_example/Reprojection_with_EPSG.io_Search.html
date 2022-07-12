@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>使用 EPSG.io 搜索重新投影</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css" />
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <!-- proj4.js 擴充套件-->
+    <script src="js/proj4.js"></script>
+    <!-- core-js 使用 api的套件-->
+    <script src="Js/core3.20.3.js"></script>
+  </head>
+  <style>
+    .map {
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+
+  <body>
+    <h1>使用 EPSG.io 搜索重新投影</h1>
+    <div id="map" class="map"></div>
+    <form class="form-inline">
+      <label for="epsg-query">搜尋座標系統：&nbsp</label>
+      <input
+        type="text"
+        id="epsg-query"
+        placeholder="4326, 27700, 3031, US National Atlas, Swiss, France, ..."
+        class="form-control"
+        size="50"
+      />
+      <button id="epsg-search" class="btn">搜尋</button>
+      <span id="epsg-result"></span>
+    </form>
+    <form class="form-inline">
+      <label for="render-edges">
+        渲染重投影邊緣：
+        <input type="checkbox" id="render-edges" />
+      </label>
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <label for="show-tiles">
+        顯示圖塊坐標：
+        <input type="checkbox" id="show-tiles" />
+      </label>
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <label for="show-graticule">
+        顯示刻度：
+        <input type="checkbox" id="show-graticule" />
+      </label>
+    </form>
+    <h4>
+      <a href="https://epsg.io/">此示例顯示了通過在EPSG.io</a>數據庫中搜索從 OSM
+      (EPSG:3857) 到任意投影的客戶端光柵重投影功能。
+    </h4>
+    <script>
+      // OpenStreetMap 切片服務器的圖層源。
+      const osmSource = new ol.source.OSM();
+
+      // 顯示圖塊坐標
+      const debugLayer = new ol.layer.Tile({
+        // 來源: 一個偽圖塊源，它不會從服務器獲取圖塊，但會呈現圖塊網格/投影的網格輪廓以及每個圖塊的坐標。
+        source: new ol.source.TileDebug({
+          // 瓷磚網格。: 讀取網格
+          tileGrid: osmSource.getTileGrid(),
+          // 座標系統: 讀取座標系統
+          projection: osmSource.getProjection(),
+        }),
+        // 能見度
+        visible: false,
+      });
+
+      // 顯示刻度: 為坐標系渲染網格的圖層（目前僅支持 EPSG:4326）。
+      const graticule = new ol.layer.Graticule({
+        // 用於線條的樣式，可選。: 設置矢量特徵的筆觸樣式。
+        strokeStyle: new ol.style.Stroke({
+          // 顏色: rgba(紅, 綠, 藍, 黑)
+          color: "rgba(255, 120, 0, 0.9)", // 橘色
+          // 寬度
+          width: 2,
+          // 線條虛線圖案。
+          lineDash: [0.5, 4],
+        }),
+        // 為每條刻度線渲染帶有相應緯度/經度的標籤。
+        showLabels: true,
+        // 能見度。
+        visible: false,
+        // 是否水平重複格線。
+        wrapX: false,
+      });
+
+      // 宣告一個 Map 物件
+      const map = new ol.Map({
+        // 這裡是宣告圖層陣列
+        layers: [
+          // Tile = TileLayer
+          new ol.layer.Tile({
+            // 來源: OSM()
+            source: osmSource,
+          }),
+          debugLayer,
+          graticule,
+        ],
+        // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+        target: "map",
+        // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+        view: new ol.View({
+          // 座標系統
+          projection: "EPSG:3857",
+          // center 地圖中心地點:[經度,緯度]
+          center: [0, 0],
+          // 視圖縮放等級
+          zoom: 1,
+        }),
+      });
+
+      // 搜尋座標系統
+      const queryInput = document.getElementById("epsg-query");
+      // 搜尋按鈕
+      const searchButton = document.getElementById("epsg-search");
+      // 搜尋結果
+      const resultSpan = document.getElementById("epsg-result");
+      // 渲染重投影邊緣
+      const renderEdgesCheckbox = document.getElementById("render-edges");
+      // 顯示圖塊坐標
+      const showTilesCheckbox = document.getElementById("show-tiles");
+      // 顯示刻度
+      const showGraticuleCheckbox = document.getElementById("show-graticule");
+
+      //#region setProjection [ 設定座標系統 ]
+      /**
+       * 設定座標系統
+       * @param {number} code 座標系統代碼
+       * @param {number} name 座標系統名稱
+       * @param {number} proj4def proj4座標系統參數
+       * @param {number} bbox 地圖範圍
+       * @returns {void}
+       */
+      function setProjection(code, name, proj4def, bbox) {
+        // 判斷有缺資料
+        if (
+          code === null ||
+          name === null ||
+          proj4def === null ||
+          bbox === null
+        ) {
+          resultSpan.innerHTML = "沒有找到可用的東西，使用 EPSG:3857...";
+          // 設置此地圖的視圖。
+          map.setView(
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            new ol.View({
+              // 座標系統
+              projection: "EPSG:3857",
+              // 地圖中心地點:[經度,緯度]
+              center: [0, 0],
+              // 視圖縮放等級
+              zoom: 1,
+            })
+          );
+          return;
+        }
+
+        // 顯示搜尋到的座標系統資訊
+        resultSpan.innerHTML = "(" + code + ") " + name;
+
+        // 座標系統
+        const newProjCode = "EPSG:" + code;
+        // 首先定義坐標系統的參數(這些內容包含使用大地框架、橢球、投影等)，proj4轉換是根據這些參數
+        proj4.defs(newProjCode, proj4def);
+        // 使在 proj4 中定義的投影（帶有proj4.defs()）在 OpenLayers 中可用。
+        ol.proj.proj4.register(proj4);
+        // 讀取座標系統
+        const newProj = ol.proj.get(newProjCode);
+        // getTransform(來源, 目標) 給定投影類對象，搜索轉換函數以將坐標數組從源投影轉換為目標投影。
+        const fromLonLat = ol.proj.getTransform("EPSG:4326", newProj);
+
+        // 地圖範圍 [最小經度, 最小緯度, 最大經度, 最大緯度]
+        let worldExtent = [bbox[1], bbox[2], bbox[3], bbox[0]];
+        // 設置此投影的世界範圍。
+        newProj.setWorldExtent(worldExtent);
+
+        // 投影範圍的近似計算，
+        // 檢查世界範圍是否越過日期變更線
+        if (bbox[1] > bbox[3]) {
+          // 地圖範圍 [最小經度, 最小緯度, 最大經度, 最大緯度]
+          worldExtent = [bbox[1], bbox[2], bbox[3] + 360, bbox[0]];
+        }
+
+        // applyTransform(地圖範圍, 變換函數(轉換後的座標), 目的地範圍(註:可選), 用於變換的每邊的停靠點數(註:可選)) 對范圍應用變換函數。
+        const extent = ol.extent.applyTransform(
+          worldExtent,
+          fromLonLat,
+          undefined,
+          80
+        );
+        // 設置此投影的有效範圍。
+        newProj.setExtent(extent);
+
+        // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+        const newView = new ol.View({
+          // 座標系統
+          projection: newProj,
+        });
+        // 設置此地圖的視圖。
+        map.setView(newView);
+        // fit(適合視圖的幾何圖形或範圍, opt_options) 根據給定的地圖大小和邊界擬合給定的幾何圖形或範圍。
+        newView.fit(extent);
+      }
+      //#endregion
+
+      //#region search [ 搜尋 ]
+      /**
+       * 搜尋
+       * 傳入座標系統 or 區域名稱
+       * 查詢座標系統
+       * @param {string} query 座標系統 or 區域名稱
+       * @returns {void}
+       */
+      function search(query) {
+        resultSpan.innerHTML = "搜尋中...";
+        // fetch 讀取 API檔案，提供了一種 JavaScript Interface 來操作 HTTP pipeline，比方 request 和 response。
+        // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/API/Fetch_API/Using_Fetch
+        fetch("https://epsg.io/?format=json&q=" + query)
+          // 非同步行為完成後的動作。
+          // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+          .then(function (response) {
+            // 讀取 json格式
+            return response.json();
+          })
+          // 非同步行為完成後的動作。
+          // 參考網址:https://developer.mozilla.org/zh-TW/docs/Web/JavaScript/Reference/Global_Objects/Promise/then
+          .then(function (json) {
+            // 讀取結果
+            const results = json["results"];
+            // 判斷是否有資料
+            if (results && results.length > 0) {
+              // 抓取資料
+              for (let i = 0, ii = results.length; i < ii; i++) {
+                // 存放抓取的資料
+                const result = results[i];
+                // 判斷是否有資料
+                if (result) {
+                  // 讀取 代碼
+                  const code = result["code"];
+                  // 讀取 名稱
+                  const name = result["name"];
+                  const proj4def = result["proj4"];
+                  const bbox = result["bbox"];
+                  // 判斷有資料
+                  if (
+                    code &&
+                    code.length > 0 &&
+                    proj4def &&
+                    proj4def.length > 0 &&
+                    bbox &&
+                    bbox.length == 4
+                  ) {
+                    // 設定座標系統
+                    setProjection(code, name, proj4def, bbox);
+                    return;
+                  }
+                }
+              }
+            }
+            // 設定座標系統
+            setProjection(null, null, null, null);
+          });
+      }
+      //#endregion
+
+      /**
+       * 處理點擊事件。
+       * @param {Event} event 事件
+       */
+      searchButton.onclick = function (event) {
+        // 搜尋座標系統或名稱，真 更新座標系統，否 顯示 沒有找到可用的東西
+        search(queryInput.value);
+        // 如果事件可以被取消，就取消事件（即取消事件的預設行為）
+        event.preventDefault();
+      };
+
+      // 渲染重投影邊緣
+      renderEdgesCheckbox.onchange = function () {
+        // 設置是否渲染重投影邊緣（通常用於調試）。
+        osmSource.setRenderReprojectionEdges(renderEdgesCheckbox.checked);
+      };
+      // 顯示圖塊坐標
+      showTilesCheckbox.onchange = function () {
+        // 設置圖層的可見性
+        debugLayer.setVisible(showTilesCheckbox.checked);
+      };
+      // 顯示刻度
+      showGraticuleCheckbox.onchange = function () {
+        // 設置圖層的可見性
+        graticule.setVisible(showGraticuleCheckbox.checked);
+      };
+    </script>
+    <br /><a
+      href="https://openlayers.org/en/latest/examples/reprojection-by-code.html"
+      >官方範例</a
+    >
+  </body>
+</html>

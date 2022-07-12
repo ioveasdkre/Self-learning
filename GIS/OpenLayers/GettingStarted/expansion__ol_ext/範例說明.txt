@@ -1,0 +1,3 @@
+1.LayerSwitcher_control               圖層切換器彈出窗口
+2.WMTS_Capabilities_control           WMTS圖層功能控制
+3.Undo_Redo                           線上繪圖與編修(重做流程/撤銷還原流程)

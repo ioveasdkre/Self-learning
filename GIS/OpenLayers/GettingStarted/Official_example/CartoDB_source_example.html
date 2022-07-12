@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帆布瓷磚(放大縮小自動生成 x, y, z座標)</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>帆布瓷磚(放大縮小自動生成 x, y, z座標)</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>黑色網格圖塊是在客戶端上使用 HTML5 畫布生成的。顯示的瓦片坐標是 OpenLayers 瓦片坐標。這些從下到上增加，但標準 XYZ 平鋪方案坐標從上到下增加。要計算y標準 XYZ 平鋪坐標的 ，請使用-y - 1。
+    </h4>
+    <script>
+        // OpenStreetMap 切片服務器的圖層源。
+        var osmSource = new ol.source.OSM();
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:
+                    source: osmSource
+                }),
+                // Tile = TileLayer
+                new ol.layer.Tile({
+                    // 來源:一個偽圖塊源，它不從服務器獲取圖塊，而是渲染圖塊網格/投影的網格輪廓以及每個圖塊的坐標。
+                    source: new ol.source.TileDebug({
+                        // 可選投影(座標系統)。
+                        projection: 'EPSG:3857',
+                        // 瓷磚網格:返回瓦片源的瓦片網格。
+                        tileGrid: osmSource.getTileGrid()
+                    })
+                })
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 最初添加到地圖的控件。:默認情況下包含在地圖中的一組控件。除非另有配置，否則這將返回一個包含以下每個控件的實例的集合：
+            controls: ol.control.defaults({
+                // 來源選項
+                attributionOptions: {
+                    // 指定是否可以折疊來源(版權資訊)。
+                    collapsible: false
+                }
+            }),
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // center 地圖中心地點:[經度,緯度]
+                // ol.proj.transform(座標, 來源, 目標) 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.transform([-0.1275, 51.507222], 'EPSG:4326', 'EPSG:3857'),
+                // 視圖縮放等級
+                zoom: 10
+            })
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/v4.6.5/examples/attributions.html">官方範例</a>
+</body>
+
+</html>

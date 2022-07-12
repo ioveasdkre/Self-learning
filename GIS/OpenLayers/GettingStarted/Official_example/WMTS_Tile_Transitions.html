@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMTS 平鋪功能(海平面)</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+</head>
+<style>
+    .map {
+        width: 100%;
+        height: 400px;
+    }
+</style>
+
+<body>
+    <h1>WMTS 平鋪功能(海平面)</h1>
+    <div id="map" class="map"></div>
+    <label>
+        海平面
+        <input id="slider" type="range" value="10" max="100" min="-1">
+    </label>
+    <span id="theinfo"></span>
+    <h4>在連續更改尺寸時演示圖層的平滑重新加載。演示層是全球海平面計算（來自SCALGO 的洪水計算，來自CGIAR-CSI SRTM 的基礎數據），其中如果海平面上升到x
+        m以上，則被淹沒的單元格被著色為藍色。用戶使用滑塊選擇海平面維度。</h4>
+    <script>
+        // 在谷歌投影(座標系統)中創建 WMTS 平舖網格
+        // ol.proj.get(座標系統) 獲取指定代碼的 座標系統對象。
+        const projection = ol.proj.get('EPSG:3857');
+        // 瓷磚(地圖)尺寸像素
+        const tileSizePixels = 256;
+        // ol.extent.getWidth(範圍) 獲取範圍的寬度。
+        // getExtent 獲取此平舖網格的範圍（如果已配置）。
+        const tileSizeMtrs = ol.extent.getWidth(projection.getExtent()) / tileSizePixels;
+        // 決議。
+        const matrixIds = [];
+        // 矩陣 ID。
+        const resolutions = [];
+        for (let i = 0; i <= 14; i++) {
+            // 決議。
+            matrixIds[i] = i;
+            // 矩陣 ID。
+            // Math.pow(base, exponent) 回傳 base 的 exponent 次方（幂）值，也就是 baseexponent。
+            resolutions[i] = tileSizeMtrs / Math.pow(2, i);
+        }
+        // 為訪問 WMTS 平鋪圖像服務器的源設置網格模式。
+        const tileGrid = new ol.tilegrid.WMTS({
+            // 對於每個縮放級別，平舖網格原點，即x和y軸相交 ( [z, 0, 0]) 的位置。如果給定，數組長度應與數組長度匹配resolutions，即每個分辨率可以有不同的原點。瓷磚坐標從左到右和向下增加。如果沒有指定，extent或者origin必須提供。
+            // ol.extent.getTopLeft 獲取範圍的左上角坐標。
+            // getExtent 獲取此平舖網格的範圍（如果已配置）。
+            origin: ol.extent.getTopLeft(projection.getExtent()),
+            // 決議。每個分辨率的數組索引需要匹配縮放級別。
+            resolutions: resolutions,
+            // 矩陣 ID。這個數組的長度需要和數組的長度相匹配resolutions。
+            matrixIds: matrixIds,
+        });
+
+        // 令牌
+        const scalgoToken = 'CC5BF28A7D96B320C7DFBFD1236B5BEB';
+
+        // 來自 WMTS服務器的切片數據的圖層源。
+        const wmtsSource = new ol.source.WMTS({
+            // 服務的 URL。
+            url: 'https://ts2.scalgo.com/olpatch/wmts?token=' + scalgoToken,
+            // WMTS 功能中公佈的圖層名稱。
+            layer: 'SRTM_4_1:SRTM_4_1_flooded_sealevels',
+            // 圖像格式。
+            format: 'image/png',
+            // 矩陣集。
+            matrixSet: 'EPSG:3857',
+            // 版權聲明
+            attributions: [
+                '<a href="https://scalgo.com" target="_blank">SCALGO</a>',
+                '<a href="https://cgiarcsi.community/data/' +
+                'srtm-90m-digital-elevation-database-v4-1"' +
+                ' target="_blank">CGIAR-CSI SRTM</a>',
+            ],
+            // 瓷磚網格。
+            tileGrid: tileGrid,
+            // WMTS 功能中公佈的樣式名稱。
+            style: 'default',
+            // 磁貼請求的附加“維度”。這是一個對象，其屬性的名稱類似於所宣傳的 WMTS 維度。
+            dimensions: {
+                // 臨界點
+                'threshold': 100,
+            },
+        });
+
+        // 宣告一個 Map 物件
+        const map = new ol.Map({
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // 座標系統: EPSG:3857
+                projection: projection,
+                // 地圖中心地點:[經度,緯度]
+                center: [-9871995, 3566245],
+                // 視圖縮放等級
+                zoom: 6,
+            }),
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 來源:OpenStreetMap 切片服務器的圖層源。
+                    source: new ol.source.OSM(),
+                }),
+                // 對於在按特定分辨率的縮放級別組織的網格中提供預渲染、平鋪圖像的圖層源。
+                new ol.layer.Tile({
+                    // 透明度
+                    opacity: 0.5,
+                    // 來源
+                    source: wmtsSource,
+                }),
+            ],
+        });
+
+        // 滑塊
+        const slider = document.getElementById('slider');
+        // 更新來源維度
+        const updateSourceDimension = function () {
+            // 獲取維度，即那些通過“維度”選項傳遞給構造函數的維度，並且可能使用 updateDimensions 方法進行更新。
+            wmtsSource.updateDimensions({ 'threshold': slider.value });
+            // 滑塊的數字顯示於 id為 theinfo的標籤
+            document.getElementById('theinfo').innerHTML = slider.value + ' 米';
+        };
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        // input 元素內容被改變時
+        slider.addEventListener('input', updateSourceDimension);
+        // 将指定的监听器注册到 EventTarget 上，当该对象触发指定的事件时，指定的回调函数就会被执行。
+        // change 通用更改事件。當修訂計數器增加時觸發。
+        slider.addEventListener('change', updateSourceDimension);
+        // 更新來源維度(自訂方法)
+        updateSourceDimension();
+    </script>
+    <br><a href="https://openlayers.org/en/latest/examples/wmts-dimensions.html">官方範例</a>
+</body>
+
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用 CanvasGradient 或 CanvasPattern 的樣式功能</title>
+    <!-- 舊瀏覽器的指針事件 polyfill，參見 https://caniuse.com/#feat=pointer -->
+    <script src="https://unpkg.com/elm-pep"></script>
+    <!-- 以下行僅適用於 Internet Explorer 和 Android 4.x 等舊環境 -->
+    <script
+        src="https://cdn.polyfill.io/v3/polyfill.min.js?features=fetch,requestAnimationFrame,Element.prototype.classList,URL,TextDecoder,Number.isInteger"></script>
+
+    <!-- OpenLayers 的 CSS，非必要載入 -->
+    <link rel="stylesheet" href="OpenLayers_Kit/ol.css" type="text/css">
+    <!-- OpenLayers Library -->
+    <script src="OpenLayers_Kit/ol.js"></script>
+    <link rel="stylesheet" href="css/Styling_feature_with_CanvasGradient_or_CanvasPattern.css" type="text/css">
+</head>
+
+<body>
+    <h1>使用 CanvasGradient 或 CanvasPattern 的樣式功能</h1>
+    <div id="map" class="map" tabindex="0"></div>
+    <h4>首先這個例子創建了一個可重用的CanvasPattern和一個CanvasGradient. 這些國家/地區是從 GeoJSON 文件加載的。樣式函數為每個國家/地區確定是否使用預先生成的 CanvasGradient（彩虹色）或 CanvasPattern（重複堆疊的圓圈）填充。</h4>
+    <script>
+        // 可以依指定的標籤名稱（tagName）建立 HTML 元素，或是在未定義標籤名稱下建立一個 HTMLUnknownElement (en-US)。
+        var canvas = document.createElement('canvas');
+        // 返回畫布上的繪圖上下文，或者null如果上下文標識符不受支持，或者畫布已設置為不同的上下文模式。
+        var context = canvas.getContext('2d');
+
+        // 漸變和圖案在畫布像素空間中，因此我們調整渲染器的像素比例
+        // ol.has.DEVICE_PIXEL_RATIO 設備上的物理像素與設備獨立像素（下降）之間的比率 ( window.devicePixelRatio)。
+        var pixelRatio = ol.has.DEVICE_PIXEL_RATIO;
+
+        // 生成彩虹漸變
+        function gradient(feature, resolution) {
+            // getGeometry 獲取特徵默認幾何的名稱。
+            // getExtent 返回視圖投影（或用戶投影，如果設置）中的當前繪製範圍
+            var extent = feature.getGeometry().getExtent();
+            // 漸變從每個要素的左邊緣開始，在右邊緣結束。 坐標原點是幾何體範圍的左上角，因此我們只需將幾何體的範圍寬度除以分辨率並乘以 pixelRatio 以匹配渲染器的像素坐標系。
+            // createLinearGradient(起點x, 起點y, 終點x, 終點y)沿連接兩個給定坐標的線創建漸變。
+            // ol.extent.getWidth 獲取寬度
+            var grad = context.createLinearGradient(0, 0, ol.extent.getWidth(extent) / resolution * pixelRatio, 0);
+
+            // 添加一个由偏移值和颜色值指定的断点到渐变。
+            grad.addColorStop(0, 'red');
+            grad.addColorStop(1 / 6, 'orange');
+            grad.addColorStop(2 / 6, 'yellow');
+            grad.addColorStop(3 / 6, 'green');
+            grad.addColorStop(4 / 6, 'aqua');
+            grad.addColorStop(5 / 6, 'blue');
+            grad.addColorStop(1, 'purple');
+            return grad;
+        }
+
+        // 在白色背景上生成帶有兩個圓圈的畫布圖案
+        var pattern = (function () {
+            // 寬度
+            canvas.width = 11 * pixelRatio;
+            // 高度
+            canvas.height = 11 * pixelRatio;
+            // 白色背景
+            context.fillStyle = 'white';
+            // fillRect(X, Y, width, height)繪製一個矩形，根據當前 fillStyle.此方法直接繪製到畫布上，不修改當前路徑，因此任何後續fill()或 stroke()調用都不會對其產生影響。
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            // 外圓
+            context.fillStyle = 'rgba(102, 0, 102, 0.5)';
+            // 通過清空子路徑列表來啟動新路徑。
+            context.beginPath();
+            // arc(X, Y, 半徑, 以弧度為單位的弧開始的角度, 弧以弧度結束的角度) 當前子路徑添加一個圓弧。
+            context.arc(5 * pixelRatio, 5 * pixelRatio, 4 * pixelRatio, 0, 2 * Math.PI);
+            // 將陣列中索引的第一個到最後一個的每個位置全部填入一個靜態的值。
+            context.fill();
+            // 內圈
+            context.fillStyle = 'rgb(55, 0, 170)';
+            // 通過清空子路徑列表來啟動新路徑。
+            context.beginPath();
+            // arc(X, Y, 半徑, 以弧度為單位的弧開始的角度, 弧以弧度結束的角度) 當前子路徑添加一個圓弧。
+            context.arc(5 * pixelRatio, 5 * pixelRatio, 2 * pixelRatio, 0, 2 * Math.PI);
+            // 將陣列中索引的第一個到最後一個的每個位置全部填入一個靜態的值。
+            context.fill();
+            // 使用指定的圖像和重複創建圖案。此方法返回一個CanvasPattern.此方法不會直接在畫布上繪製任何內容。
+            return context.createPattern(canvas, 'repeat');
+        }());
+
+        // 為漸變或圖案填充生成樣式
+        // ol.style.Fill 設置矢量特徵(geojson)的填充樣式。
+        var fill = new ol.style.Fill();
+        // 設定風格
+        var style = new ol.style.Style({
+            // 填充樣式。
+            fill: fill,
+            // 筆觸樣式:設置矢量特徵(geojson)的描邊(區域邊框)樣式。
+            stroke: new ol.style.Stroke({
+                // 區域邊框顏色
+                color: '#333',
+                // 邊線寬度
+                width: 2
+            })
+        });
+
+        /**
+         * 矢量層的樣式函數將返回一個包含上述漸變或圖案的樣式數組。
+         *
+         * @param {ol.Feature} feature 風格的特徵。
+         * @param {number} resolution 解析度。
+         * @return {ol.style.Style} 用於特徵的樣式。
+         */
+        var getStackedStyle = function (feature, resolution) {
+            // 讀取 id
+            var id = feature.getId();
+            // setColor 設置顏色（顏色）
+            // gradient 將漸變顏色作為字符串數組返回。
+            fill.setColor(id > 'J' ? gradient(feature, resolution) : pattern);
+            return style;
+        };
+
+        // 創建一個矢量圖層，利用上面的樣式功能......
+        // ol.layer.Vector 在客戶端呈現的矢量數據(geojson檔)。
+        var vectorLayer = new ol.layer.Vector({
+            // 來源:為矢量圖層提供特徵源。
+            source: new ol.source.Vector({
+                // 路徑
+                url: 'https://openlayers.org/en/v4.6.5/examples/data/geojson/countries.geojson',
+                // format  XHR 功能加載器在url設置時使用的功能格式。如果url設置，則為必需，否則忽略。
+                // ol.format.GeoJSON 用於以 GeoJSON 格式讀取和寫入數據的特徵格式。
+                format: new ol.format.GeoJSON()
+            }),
+            // 圖層樣式。
+            style: getStackedStyle
+        });
+
+        // ……最後用那個圖層創建一個地圖。
+        // 宣告一個 Map 物件
+        var map = new ol.Map({
+            // 這裡是宣告圖層陣列
+            layers: [
+                // 矢量層(geojson檔)(自己設定的物件)
+                vectorLayer
+            ],
+            // 將 Map 物件目標指向 div，這邊要注意的是其值是 div 的 id 屬性。
+            target: 'map',
+            // 這裡是初始化地圖視圖的地方。定義初始中心位置及視圖層級
+            view: new ol.View({
+                // center 地圖中心地點:[經度,緯度]
+                // ol.proj.fromLonLat 將坐標從經度/緯度轉換為不同的投影。
+                center: ol.proj.fromLonLat([7, 52]),
+                // 視圖縮放等級
+                zoom: 3
+            })
+        });
+    </script>
+    <br><a href="https://openlayers.org/en/v4.6.5/examples/canvas-gradient-pattern.html">官方範例</a>
+</body>
+
+</html>
