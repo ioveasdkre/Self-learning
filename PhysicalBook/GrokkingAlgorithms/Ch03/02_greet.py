@@ -26,9 +26,10 @@ def bye():
     print("ok bye!")
 # endregion
 
-# region greet [遞迴停止條件]
+# region greet [呼叫堆疊(Call Stack)]
 def greet(name):
     '''
+    呼叫堆疊(Call Stack)
     1. 傳入 name參數, 並輸出 hello name !                 此時 greet函式 加入記憶體空間
     2. 暫停 greet函式, 執行 greet2函式                    此時 greet2函式 加入記憶體空間
     3. greet2函式執行完, 輸出 getting ready to say bye... 此時 greet2函式 移除記憶體空間
