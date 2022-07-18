@@ -1,0 +1,43 @@
+課程練習手冊：
+
+https://github.com/hexschool/vue3-starter-files/tree/gh-pages
+
+
+
+Chrome 必裝的 Vue 開發套件：
+
+Vue Devtools：
+
+https://chrome.google.com/webstore/detail/vuejs-devtools/ljjemllljcmogpfapbkkighbhhppjdbg
+
+
+
+課程使用的 CSS 函式庫 Bootstrap：
+
+六角學院翻譯中文版：
+
+https://bootstrap5.hexschool.com/
+
+
+
+VSCode 相關套件：
+
+講師使用的佈景主題：https://marketplace.visualstudio.com/items?itemName=akamud.vscode-theme-onedark
+
+Live Server：https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer
+
+Vue 官方提供的 Vue 整合插件：https://marketplace.visualstudio.com/items?itemName=octref.vetur
+
+Vue 3 Snippets：https://marketplace.visualstudio.com/items?itemName=hollowtree.vue-snippets
+
+
+
+繁體中文版：https://marketplace.visualstudio.com/items?itemName=MS-CEINTL.vscode-language-pack-zh-hant
+
+中文版安裝說明：https://wcc723.github.io/development/2019/12/01/vscode-chinese/
+
+
+
+其它推薦 VSCode 套件：
+
+https://wcc723.github.io/development/2020/12/13/vscode-extension/
